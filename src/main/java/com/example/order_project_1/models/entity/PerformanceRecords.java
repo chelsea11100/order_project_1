@@ -39,6 +39,9 @@ public class PerformanceRecords extends BaseEntity {
     @Column(name = "createdAt")
     private LocalDateTime createdat;
 
+    @Column(name = "degree")
+    private double degree;
+
 
 
 
