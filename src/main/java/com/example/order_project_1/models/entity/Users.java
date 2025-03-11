@@ -44,6 +44,7 @@ public class Users extends BaseEntity {
     private String contactinfo;
 
 
+
     /** auto generator end **/
 
     @Repository

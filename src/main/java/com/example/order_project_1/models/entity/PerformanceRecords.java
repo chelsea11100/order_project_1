@@ -6,11 +6,13 @@ import gaarason.database.annotation.Table;
 import java.time.LocalDateTime;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import lombok.Getter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 import org.springframework.stereotype.Repository;
 
 
+@Getter
 @Data
 @ToString(callSuper = true)
 @Accessors(chain = true)
@@ -36,6 +38,8 @@ public class PerformanceRecords extends BaseEntity {
 
     @Column(name = "createdAt")
     private LocalDateTime createdat;
+
+
 
 
     /** auto generator end **/

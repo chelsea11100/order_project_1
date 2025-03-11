@@ -1,6 +1,5 @@
 package com.example.order_project_1.services;
 
-import com.example.order_project_1.models.entity.Orders;
 import com.example.order_project_1.models.entity.Users;
 import gaarason.database.contract.eloquent.Record;
 import gaarason.database.contract.eloquent.RecordList;
