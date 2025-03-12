@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -93,6 +94,8 @@ public class PerformanceService {
             salary = 100 * workload + degree * 44;
 
             PerformanceRecords record = new PerformanceRecords();
+            record.setStaffId(order.getStaffId());
+            record.setCreatedat(LocalDateTime.now());
             record.setOrderId(order.getId());
             record.setWorkload(workload.toString());
             record.setDegree(Double.parseDouble(degree.toString()));

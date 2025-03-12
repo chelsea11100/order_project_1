@@ -118,10 +118,6 @@ public class OrderService {
         }
     }
 
-    public void handleOrderAppeal(Long orderId, String appealReason) {
-        // 记录订单申诉逻辑
-    }
-
     // AI自动派单
     public void autoAssignOrder(Orders order) {
         if (order.getAcceptedat() != null) {

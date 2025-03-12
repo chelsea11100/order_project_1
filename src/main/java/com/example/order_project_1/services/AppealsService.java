@@ -6,6 +6,8 @@ import gaarason.database.contract.eloquent.Record;
 import gaarason.database.contract.eloquent.RecordList;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -31,6 +33,7 @@ public class AppealsService {
         appeal.setPerformanceRecordId(performanceRecordId);
         appeal.setReason(reason);
         appeal.setStatus("PENDING");
+        appeal.setCreatedAt(LocalDateTime.now());
 
         Long insertedId = appealsModel.newQuery().insertGetId(appeal);
         if (insertedId != null) {
