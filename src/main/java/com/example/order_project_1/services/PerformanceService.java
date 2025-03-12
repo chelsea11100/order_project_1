@@ -44,7 +44,7 @@ public class PerformanceService {
             workloadRequestBody.put("stream", false);
 
             HttpResponse workloadResponse = HttpRequest.post(OLLAMA_API_URL)
-                    .header("Content-Type", "application/json; charset=UTF-8")
+                    .header("Content-Type", "appliAcation/json; charset=UTF-8")
                     .body(workloadRequestBody.toString())
                     .execute();
 

@@ -131,17 +131,6 @@ public class OrderController {
         }
     }
 
-    // 处理订单申诉（申诉逻辑还没写）
-    @PostMapping("/{orderId}/appeal")
-    public ResponseEntity<Void> handleOrderAppeal(@PathVariable Long orderId, @RequestBody String appealReason, HttpServletRequest request) {
-        if (hasRole(request, "ADMIN")) {
-            orderService.handleOrderAppeal(orderId, appealReason);
-            return ResponseEntity.noContent().build();
-        } else {
-            return ResponseEntity.status(403).build();
-        }
-    }
-
     // 交给ai通过feedback设定工作量（评分）
     @PostMapping("/{orderId}/feedbacks")
     public ResponseEntity<Void> submitFeedback(@PathVariable Long orderId, HttpServletRequest request) {
@@ -166,4 +155,5 @@ public class OrderController {
             return ResponseEntity.status(403).build();
         }
     }
+
 }
