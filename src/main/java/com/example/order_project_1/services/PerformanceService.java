@@ -48,7 +48,7 @@ public class PerformanceService {
                     .header("Content-Type", "appliAcation/json; charset=UTF-8")
                     .body(workloadRequestBody.toString())
                     .execute();
-
+            System.out.println(workloadResponse.isOk());
             if (workloadResponse.isOk()) {
                 String workloadResponseStr = workloadResponse.body();
                 JSONObject workloadResponseJson = new JSONObject(workloadResponseStr);
@@ -59,6 +59,7 @@ public class PerformanceService {
                     workload = Double.parseDouble(workloadMatcher.group());
                 }
             }
+            System.out.println("workload:" +workload);
 
             if (workload == null) {
                 return null;
@@ -74,7 +75,7 @@ public class PerformanceService {
                     .header("Content-Type", "application/json; charset=UTF-8")
                     .body(degreeRequestBody.toString())
                     .execute();
-
+            System.out.println(degreeResponse.isOk());
             if (degreeResponse.isOk()) {
                 String degreeResponseStr = degreeResponse.body();
                 JSONObject degreeResponseJson = new JSONObject(degreeResponseStr);
@@ -85,6 +86,7 @@ public class PerformanceService {
                     degree = Double.parseDouble(degreeMatcher.group());
                 }
             }
+            System.out.println("deegree:" +degree);
 
             if (degree == null) {
                 return null;

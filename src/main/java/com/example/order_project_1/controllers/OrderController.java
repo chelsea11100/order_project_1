@@ -36,7 +36,6 @@ public class OrderController {
 
                 System.out.println(userRole);
                 if (userRole != null) {
-                    System.out.println(2);
                     return userRole.equals(role);
                 }
             }
@@ -161,13 +160,18 @@ public class OrderController {
     // 交给ai通过feedback设定工作量（评分）
     @PostMapping("/{orderId}/feedbacks")
     public ResponseEntity<Void> submitFeedback(@PathVariable Long orderId, HttpServletRequest request) {
+
         if (hasRole(request, "USER") || hasRole(request, "STAFF") || hasRole(request, "ADMIN")) {
             Orders order = orderService.getOrderDetails(orderId);
+
             if (order != null) {
+
                 performanceRecordService.evaluateWorkload(order);
+                System.out.println("Evaluated Workload Result: " + performanceRecordService.evaluateWorkload(order));
             }
             return ResponseEntity.noContent().build();
         } else {
+
             return ResponseEntity.status(403).build();
         }
     }

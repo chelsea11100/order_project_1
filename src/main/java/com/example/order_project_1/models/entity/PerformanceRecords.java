@@ -41,7 +41,17 @@ public class PerformanceRecords extends BaseEntity {
 
     @Column(name = "degree")
     private double degree;
-
+    @Override
+    public String toString() {
+        return "PerformanceRecords{" +
+                "staffId=" + staffId +
+                ", createdat=" + createdat +
+                ", orderId=" + orderId +
+                ", workload=" + workload +
+                ", degree=" + degree +
+                ", salary=" + salary +
+                '}';
+    }
 
 
 
