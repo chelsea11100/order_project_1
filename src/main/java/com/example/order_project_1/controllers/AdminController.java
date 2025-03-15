@@ -45,7 +45,14 @@ public class AdminController {
         if (session != null) {
             Users user = (Users) session.getAttribute("user");
             if (user != null) {
-                return user.getRole().equals(role);
+                String userRole = user.getRole();
+                System.out.println("用户角色：" + userRole);
+
+                System.out.println(userRole);
+                if (userRole != null) {
+                    System.out.println(2);
+                    return userRole.equals(role);
+                }
             }
         }
         return false;

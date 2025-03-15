@@ -2,7 +2,6 @@ package com.example.order_project_1.services;
 import com.example.order_project_1.models.entity.Users;
 import com.example.order_project_1.models.entity.Orders;
 import gaarason.database.appointment.OrderBy;
-import gaarason.database.contract.eloquent.Model;
 import gaarason.database.contract.eloquent.Record;
 import gaarason.database.contract.eloquent.RecordList;
 import jakarta.annotation.Resource;
@@ -120,12 +119,12 @@ public class OrderService {
 
     // AI自动派单
     public void autoAssignOrder(Orders order) {
-        if (order.getAcceptedat() != null) {
+        if (order.getAccepted() != null) {
             return; // 订单已被接单，无需派单
         }
 
         LocalDateTime now = LocalDateTime.now();
-        if (Duration.between(order.getCreatedat(), now).toHours() < 9) {
+        if (Duration.between(order.getCreate(), now).toHours() < 9) {
             return; // 订单未超时，不触发 AI 派单
         }
 
@@ -141,7 +140,7 @@ public class OrderService {
         if (bestStaff.isPresent()) {
             Users assignedStaff = bestStaff.get();
             order.setStaffId(assignedStaff.getId());
-            order.setAcceptedat(LocalDateTime.now());
+            order.setAccepted(LocalDateTime.now());
             order.setStatus("ASSIGNED");
             // 更新数据库
             orderModel.newQuery().where("id", order.getId()).update(order);
@@ -173,11 +172,11 @@ public class OrderService {
                 .orderBy("completedAt", OrderBy.valueOf("desc"))
                 .first();
 
-        if (lastOrder == null || lastOrder.getEntity().getCompletedat() == null) {
+        if (lastOrder == null || lastOrder.getEntity().getCompleted() == null) {
             return Long.MAX_VALUE;
         }
 
-        return Duration.between(lastOrder.getEntity().getCompletedat(), LocalDateTime.now()).toHours();
+        return Duration.between(lastOrder.getEntity().getCompleted(), LocalDateTime.now()).toHours();
     }
     // **计算工作人员的平均服务质量评分**
     private double getAvgQuality(Long staffId) {

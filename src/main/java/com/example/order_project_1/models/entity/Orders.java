@@ -38,16 +38,16 @@ public class Orders extends BaseEntity {
     private String problemdescription;
 
     @Column(name = "appointmentTime")
-    private LocalDateTime appointmenttime;
+    private LocalDateTime appointment;
 
     @Column(name = "createdAt")
-    private LocalDateTime createdat;
+    private LocalDateTime create;
 
     @Column(name = "acceptedAt", nullable = true)
-    private LocalDateTime acceptedat;
+    private LocalDateTime accepted;
 
     @Column(name = "completedAt", nullable = true)
-    private LocalDateTime completedat;
+    private LocalDateTime completed;
 
     @Column(name = "result", nullable = true, length = 3L)
     private String result;
@@ -57,6 +57,7 @@ public class Orders extends BaseEntity {
 
     @Column(name = "image", nullable = true)
     private String image;
+
 
 
     /** auto generator end **/

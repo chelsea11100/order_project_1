@@ -1,5 +1,7 @@
 package com.example.order_project_1.controllers;
 
+import com.example.order_project_1.models.entity.Users;
+import org.springframework.http.HttpStatus;
 import com.example.order_project_1.models.entity.Orders;
 import com.example.order_project_1.services.OrderService;
 import com.example.order_project_1.services.PerformanceService;
@@ -8,12 +10,16 @@ import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.util.Enumeration;
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/orders")
 public class OrderController {
+    private static final Logger logger = LoggerFactory.getLogger(OrderController.class);
     @Autowired
     private OrderService orderService;
     @Autowired
@@ -23,10 +29,16 @@ public class OrderController {
     private boolean hasRole(HttpServletRequest request, String role) {
         HttpSession session = request.getSession(false);
         if (session != null) {
-            // 假设登录时将用户角色信息存入会话，键为 "role"
-            String userRole = (String) session.getAttribute("role");
-            if (userRole != null) {
-                return userRole.equals(role);
+            Users user = (Users) session.getAttribute("user");
+            if (user != null) {
+                String userRole = user.getRole();
+                System.out.println("用户角色：" + userRole);
+
+                System.out.println(userRole);
+                if (userRole != null) {
+                    System.out.println(2);
+                    return userRole.equals(role);
+                }
             }
         }
         return false;
@@ -35,11 +47,26 @@ public class OrderController {
     // 用户创建订单
     @PostMapping
     public ResponseEntity<Orders> createOrder(@RequestBody Orders order, HttpServletRequest request) {
-        if (hasRole(request, "USER")) {
+        // 输入验证
+        if (order == null) {
+            logger.error("创建订单时，传入的订单对象为空");
+            return ResponseEntity.badRequest().build();
+        }
+        // 权限验证
+        if (!hasRole(request, "USER")) {
+            System.out.println(order.getUserId());
+            logger.warn("用户没有创建订单的权限，请求被拒绝");
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Orders());
+        }
+        try {
+            // 创建订单
             Orders createdOrder = orderService.createOrder(order);
+            logger.info("订单创建成功，订单 ID: {}", createdOrder.getId()); // 假设 Orders 类有 getId 方法
             return ResponseEntity.ok(createdOrder);
-        } else {
-            return ResponseEntity.status(403).build();
+        } catch (Exception e) {
+            // 异常处理
+            logger.error("创建订单时发生异常", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new Orders());
         }
     }
 
