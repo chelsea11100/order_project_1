@@ -29,7 +29,7 @@ public class Users extends BaseEntity {
     private String password;
 
     @Column(name = "studentIdOrEmployeeId", length = 20L)
-    private String studentidoremployeeid;
+    private String studentIdOrEmployeeId;
 
     @Column(name = "role", length = 5L)
     private String role;
@@ -43,7 +43,8 @@ public class Users extends BaseEntity {
     @Column(name = "contactInfo", nullable = true)
     private String contactinfo;
 
-
+    @Column(name = "avatar", nullable = true)
+    private String avatar;
 
     /** auto generator end **/
 

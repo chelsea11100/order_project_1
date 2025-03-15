@@ -55,8 +55,8 @@ public class Orders extends BaseEntity {
     @Column(name = "userFeedback", nullable = true, length = 65535L)
     private String userfeedback;
 
-
-
+    @Column(name = "image", nullable = true)
+    private String image;
 
 
     /** auto generator end **/

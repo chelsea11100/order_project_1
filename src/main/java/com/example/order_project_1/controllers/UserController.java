@@ -33,6 +33,7 @@ public class UserController {
     public ResponseEntity<Users> registerUser(@RequestBody Users user, HttpServletRequest request) {
         // 注册不需要角色验证
         Users registeredUser = userService.registerUser(user);
+        System.out.println(user.getStudentIdOrEmployeeId());
         return ResponseEntity.ok(registeredUser);
     }
 
@@ -53,6 +54,7 @@ public class UserController {
         HttpSession session = request.getSession(false);
         if (session != null) {
             session.invalidate();
+            request.getServletContext().removeAttribute(session.getId());
         }
         return ResponseEntity.noContent().build();
     }

@@ -119,6 +119,7 @@ public class UserService {
             Users currentUser = existingRecord.getEntity();
             currentUser.setUsername(userDetails.getUsername());
             currentUser.setContactinfo(userDetails.getContactinfo());
+            currentUser.setAvatar(userDetails.getAvatar());
             existingRecord.save();
             return currentUser;
         }
@@ -157,6 +158,9 @@ public class UserService {
             }
             if (newUserDetails.getSpecialty() != null) {
                 currentUser.setSpecialty(newUserDetails.getSpecialty());
+            }
+            if (newUserDetails.getAvatar() != null) {
+                currentUser.setAvatar(newUserDetails.getAvatar());
             }
             existingRecord.save();
             return currentUser;
