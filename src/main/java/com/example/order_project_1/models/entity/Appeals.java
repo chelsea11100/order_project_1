@@ -15,7 +15,7 @@ import org.springframework.stereotype.Repository;
 @ToString(callSuper = true)
 @Accessors(chain = true)
 @EqualsAndHashCode(callSuper = true)
-@Table(name = "appeal")
+@Table(name = "appeals")
 public class Appeals extends BaseEntity {
     private static final long serialVersionUID = 1L;
 

@@ -1,5 +1,6 @@
 package com.example.order_project_1.models.entity;
 
+import cn.hutool.json.JSONObject;
 import com.example.order_project_1.models.entity.base.BaseEntity;
 import gaarason.database.annotation.Column;
 import gaarason.database.annotation.Table;

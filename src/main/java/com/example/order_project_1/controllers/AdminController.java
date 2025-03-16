@@ -24,20 +24,6 @@ public class AdminController {
     @Autowired
     private OrderService orderService;
 
-    // 登录
-    @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody Users user) {
-        Optional<Users> loggedInUser = userService.loginUser(user.getUsername(), user.getPassword());
-        if (loggedInUser.isPresent()) {
-            // 登录成功，将用户信息存入会话
-            HttpSession session = ((HttpServletRequest) ServletRequest.class.cast(null)).getSession(true);
-            session.setAttribute("user", loggedInUser.get());
-            return ResponseEntity.ok(loggedInUser.get());
-        } else {
-            // 登录失败，返回错误信息
-            return ResponseEntity.status(401).body("Invalid username or password");
-        }
-    }
 
     // 检查用户是否具有指定角色
     private boolean hasRole(HttpServletRequest request, String role) {

@@ -167,7 +167,6 @@ public class OrderController {
             if (order != null) {
 
                 performanceRecordService.evaluateWorkload(order);
-                System.out.println("Evaluated Workload Result: " + performanceRecordService.evaluateWorkload(order));
             }
             return ResponseEntity.noContent().build();
         } else {
