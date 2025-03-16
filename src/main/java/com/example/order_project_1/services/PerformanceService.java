@@ -23,7 +23,7 @@ public class PerformanceService {
     @Resource
     PerformanceRecords.Model performanceRecordModel;
     private static final String MODEL_NAME = "deepseek-r1";
-    private static final String OLLAMA_API_URL = "https://sc-lapp02.gcu.edu.cn/";
+    private static final String OLLAMA_API_URL = "http://localhost:11434/";
     // 部署好的 API 的 URL
 
 
@@ -49,6 +49,7 @@ public class PerformanceService {
                     .header("Content-Type", "appliAcation/json; charset=UTF-8")
                     .body(workloadRequestBody.toString())
                     .execute();
+            System.out.println(workloadResponse.getStatus());
             System.out.println(workloadResponse.isOk());
             if (workloadResponse.isOk()) {
                 String workloadResponseStr = workloadResponse.body();
