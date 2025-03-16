@@ -57,11 +57,5 @@ public class PerformanceController {
         return ResponseEntity.ok(updatedRecord);
     }
 
-    //处理绩效申诉
-    @PostMapping("/{performanceId}/appeal")
-    public ResponseEntity<Void> handlePerformanceAppeal(@PathVariable Long performanceId, @RequestBody String appealReason) {
-        // 这里可以根据需要添加角色判断，如果不需要角色限制可以不添加
-        performanceService.handlePerformanceAppeal(performanceId, appealReason);
-        return ResponseEntity.noContent().build();
-    }
+
 }

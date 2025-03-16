@@ -22,6 +22,10 @@ public class OrderService {
     private Users.Model userModel;
     // 用户创建订单
     public Orders createOrder(Orders order) {
+        // 获取当前时间
+        LocalDateTime currentTime = LocalDateTime.now();
+        // 设置创建时间
+        order.setCreate(currentTime);
         // 使用 insertGetId 方法插入记录并获取插入记录的主键 ID
         Long insertedId = orderModel.newQuery().insertGetId(order);
         if (insertedId != null) {

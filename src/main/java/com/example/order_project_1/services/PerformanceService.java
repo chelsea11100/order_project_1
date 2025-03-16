@@ -7,11 +7,10 @@ import com.example.order_project_1.models.entity.Orders;
 import com.example.order_project_1.models.entity.PerformanceRecords;
 import gaarason.database.contract.eloquent.Record;
 import gaarason.database.contract.eloquent.RecordList;
+
 import jakarta.annotation.Resource;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
-import org.springframework.web.util.UriComponentsBuilder;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -23,8 +22,10 @@ public class PerformanceService {
 
     @Resource
     PerformanceRecords.Model performanceRecordModel;
-    private static final String OLLAMA_API_URL = "https://sc-lapp02.gcu.edu.cn/";
     private static final String MODEL_NAME = "deepseek-r1";
+    private static final String OLLAMA_API_URL = "https://sc-lapp02.gcu.edu.cn/";
+    // 部署好的 API 的 URL
+
 
     @Resource
     private RestTemplate restTemplate;
@@ -135,9 +136,5 @@ public class PerformanceService {
             return entity;
         }
         return null;
-    }
-
-    public void handlePerformanceAppeal(Long performanceId, String appealReason) {
-        // 处理绩效申诉逻辑
     }
 }
