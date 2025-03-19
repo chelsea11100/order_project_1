@@ -104,6 +104,12 @@ public class OrderController {
         }
     }
 
+    // 管理员查看所有订单
+    @GetMapping("/all")
+    public List<Orders> getAllOrders() {
+        return orderService.getAllOrders();
+    }
+
     // 查询历史订单
     @GetMapping("/user/{userId}/history")
     public ResponseEntity<List<Orders>> getOrderHistory(@PathVariable Long userId, HttpServletRequest request) {

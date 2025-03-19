@@ -1,4 +1,5 @@
 package com.example.order_project_1.services;
+import com.example.order_project_1.models.entity.PerformanceRecords;
 import com.example.order_project_1.models.entity.Users;
 import com.example.order_project_1.models.entity.Orders;
 import gaarason.database.appointment.OrderBy;
@@ -12,12 +13,17 @@ import java.util.Optional;
 import java.time.Duration;
 import java.util.Comparator;
 import java.math.BigDecimal;
+import java.util.stream.Collectors;
+
 import org.springframework.scheduling.annotation.Scheduled;
 @Service
 public class OrderService {
 
     @Resource
     private Orders.Model orderModel;
+
+    @Resource
+    private PerformanceRecords.Model performanceModel;
     @Resource
     private Users.Model userModel;
     // 用户创建订单
@@ -48,6 +54,12 @@ public class OrderService {
     public List<Orders> getOrdersByStaffId(Long staffId) {
         RecordList<Orders, Long> records = orderModel.newQuery().where("staff_id", staffId).get();
         return records.stream().map(Record::getEntity).toList();
+    }
+
+    //管理员查询所有订单
+    public List<Orders> getAllOrders() {
+        RecordList<Orders, Long> records = orderModel.newQuery().get();
+        return records.stream().map(Record::getEntity).collect(Collectors.toList());
     }
 
     // 更新订单状态
@@ -145,7 +157,7 @@ public class OrderService {
             Users assignedStaff = bestStaff.get();
             order.setStaffId(assignedStaff.getId());
             order.setAccepted(LocalDateTime.now());
-            order.setStatus("ASSIGNED");
+            order.setStatus("已接单");
             // 更新数据库
             orderModel.newQuery().where("id", order.getId()).update(order);
         }
@@ -165,9 +177,25 @@ public class OrderService {
     }
     // **计算工作人员平均订单难度**
     private double getAvgDifficulty(Long staffId) {
-        // avg() 返回 BigDecimal，需要转换为 double
-        BigDecimal avgDifficulty = orderModel.newQuery().where("staff_id", staffId).avg("workload");
-        return avgDifficulty != null ? avgDifficulty.doubleValue() : 0.0;
+        // 调用查询方法，获取平均难度
+        Object avgDifficultyResult = performanceModel.newQuery().where("staff_id", staffId).avg("workload");
+
+        // 检查返回结果是否为 null
+        if (avgDifficultyResult == null) {
+            return 0.0;
+        }
+
+        // 检查返回结果的类型并进行转换
+        if (avgDifficultyResult instanceof BigDecimal) {
+            // 如果是 BigDecimal 类型，转换为 double
+            return ((BigDecimal) avgDifficultyResult).doubleValue();
+        } else if (avgDifficultyResult instanceof Double) {
+            // 如果是 Double 类型，直接返回
+            return (Double) avgDifficultyResult;
+        } else {
+            // 如果不是预期的类型，返回默认值 0.0
+            return 0.0;
+        }
     }
     // **计算工作人员空窗时间**
     private long getIdleTime(Long staffId) {
@@ -184,9 +212,25 @@ public class OrderService {
     }
     // **计算工作人员的平均服务质量评分**
     private double getAvgQuality(Long staffId) {
-        // avg() 返回 BigDecimal，需要转换为 double
-        BigDecimal avgQuality = orderModel.newQuery().where("staff_id", staffId).avg("degree");
-        return avgQuality != null ? avgQuality.doubleValue() : 0.0;
+        // 调用查询方法，获取平均质量
+        Object avgQualityResult = performanceModel.newQuery().where("staff_id", staffId).avg("degree");
+
+        // 检查返回结果是否为 null
+        if (avgQualityResult == null) {
+            return 0.0;
+        }
+
+        // 检查返回结果的类型并进行转换
+        if (avgQualityResult instanceof BigDecimal) {
+            // 如果是 BigDecimal 类型，转换为 double
+            return ((BigDecimal) avgQualityResult).doubleValue();
+        } else if (avgQualityResult instanceof Double) {
+            // 如果是 Double 类型，直接返回
+            return (Double) avgQualityResult;
+        } else {
+            // 如果不是预期的类型，返回默认值 0.0
+            return 0.0;
+        }
     }
     // **内部类：存储工作人员及其评分**
     private record StaffScore(Users staff, double score) {}
