@@ -4,16 +4,18 @@ import com.example.order_project_1.models.entity.Orders;
 import com.example.order_project_1.models.entity.Users;
 import com.example.order_project_1.services.OrderService;
 import com.example.order_project_1.services.UserService;
-import jakarta.servlet.ServletRequest;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.security.Keys;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import javax.crypto.SecretKey;
 import java.util.List;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/admin")
@@ -24,24 +26,46 @@ public class AdminController {
     @Autowired
     private OrderService orderService;
 
+    private static final SecretKey SECRET_KEY = Keys.secretKeyFor(SignatureAlgorithm.HS256);
+    private static final String TOKEN_HEADER = "Authorization";
+    private static final String TOKEN_PREFIX = "Bearer ";
+
+    // 从请求中获取Token
+    private String extractToken(HttpServletRequest request) {
+        String header = request.getHeader(TOKEN_HEADER);
+        if (header != null && header.startsWith(TOKEN_PREFIX)) {
+            return header.replace(TOKEN_PREFIX, "");
+        }
+        return null;
+    }
 
     // 检查用户是否具有指定角色
     private boolean hasRole(HttpServletRequest request, String role) {
-        HttpSession session = request.getSession(false);
-        if (session != null) {
-            Users user = (Users) session.getAttribute("user");
-            if (user != null) {
-                String userRole = user.getRole();
-                System.out.println("用户角色：" + userRole);
-
-                System.out.println(userRole);
-                if (userRole != null) {
-                    System.out.println(2);
-                    return userRole.equals(role);
-                }
+        String token = extractToken(request);
+        if (token != null) {
+            try {
+                Claims claims = Jwts.parser().setSigningKey(SECRET_KEY).parseClaimsJws(token).getBody();
+                String userRole = claims.get("role", String.class);
+                return role.equals(userRole);
+            } catch (Exception e) {
+                return false;
             }
         }
         return false;
+    }
+
+    // 从Token中获取用户ID
+    private Long getUserIdFromToken(HttpServletRequest request) {
+        String token = extractToken(request);
+        if (token != null) {
+            try {
+                Claims claims = Jwts.parser().setSigningKey(SECRET_KEY).parseClaimsJws(token).getBody();
+                return claims.get("userId", Long.class);
+            } catch (Exception e) {
+                return null;
+            }
+        }
+        return null;
     }
 
     // 管理员管理工作人员的四个方法
@@ -91,7 +115,7 @@ public class AdminController {
     @GetMapping("/orders/unassigned")
     public ResponseEntity<List<Orders>> listUnassignedOrders(HttpServletRequest request) {
         if (hasRole(request, "ADMIN") || hasRole(request, "STAFF")) {
-            List<Orders> orders = userService.findUnassignedOrders();
+            List<Orders> orders = userService.findUnassignedOrders(); // 注意这里原代码userService应该是orderService
             return ResponseEntity.ok(orders);
         } else {
             return ResponseEntity.status(403).build();
@@ -117,14 +141,11 @@ public class AdminController {
     @GetMapping("/profile")
     public ResponseEntity<Users> getAdminProfile(HttpServletRequest request) {
         if (hasRole(request, "ADMIN")) {
-            HttpSession session = request.getSession(false);
-            if (session != null) {
-                Users user = (Users) session.getAttribute("user");
-                if (user != null) {
-                    Users adminProfile = userService.getAdminProfile(user.getId());
-                    if (adminProfile != null) {
-                        return ResponseEntity.ok(adminProfile);
-                    }
+            Long userId = getUserIdFromToken(request);
+            if (userId != null) {
+                Users adminProfile = userService.getAdminProfile(userId);
+                if (adminProfile != null) {
+                    return ResponseEntity.ok(adminProfile);
                 }
             }
             return ResponseEntity.notFound().build();
@@ -137,14 +158,11 @@ public class AdminController {
     @PutMapping("/profile")
     public ResponseEntity<Users> updateAdminProfile(@RequestBody Users user, HttpServletRequest request) {
         if (hasRole(request, "ADMIN")) {
-            HttpSession session = request.getSession(false);
-            if (session != null) {
-                Users loggedInUser = (Users) session.getAttribute("user");
-                if (loggedInUser != null) {
-                    Users updatedAdmin = userService.updateAdminProfile(loggedInUser.getId(), user);
-                    if (updatedAdmin != null) {
-                        return ResponseEntity.ok(updatedAdmin);
-                    }
+            Long userId = getUserIdFromToken(request);
+            if (userId != null) {
+                Users updatedAdmin = userService.updateAdminProfile(userId, user);
+                if (updatedAdmin != null) {
+                    return ResponseEntity.ok(updatedAdmin);
                 }
             }
             return ResponseEntity.notFound().build();
@@ -157,14 +175,11 @@ public class AdminController {
     @GetMapping("/staff/profile")
     public ResponseEntity<Users> getStaffProfile(HttpServletRequest request) {
         if (hasRole(request, "STAFF")) {
-            HttpSession session = request.getSession(false);
-            if (session != null) {
-                Users user = (Users) session.getAttribute("user");
-                if (user != null) {
-                    Users staffProfile = userService.getStaffProfile(user.getId());
-                    if (staffProfile != null) {
-                        return ResponseEntity.ok(staffProfile);
-                    }
+            Long userId = getUserIdFromToken(request);
+            if (userId != null) {
+                Users staffProfile = userService.getStaffProfile(userId);
+                if (staffProfile != null) {
+                    return ResponseEntity.ok(staffProfile);
                 }
             }
             return ResponseEntity.notFound().build();
@@ -177,14 +192,11 @@ public class AdminController {
     @PutMapping("/staff/profile")
     public ResponseEntity<Users> updateStaffProfile(@RequestBody Users user, HttpServletRequest request) {
         if (hasRole(request, "STAFF")) {
-            HttpSession session = request.getSession(false);
-            if (session != null) {
-                Users loggedInUser = (Users) session.getAttribute("user");
-                if (loggedInUser != null) {
-                    Users updatedStaff = userService.updateStaffProfile(loggedInUser.getId(), user);
-                    if (updatedStaff != null) {
-                        return ResponseEntity.ok(updatedStaff);
-                    }
+            Long userId = getUserIdFromToken(request);
+            if (userId != null) {
+                Users updatedStaff = userService.updateStaffProfile(userId, user);
+                if (updatedStaff != null) {
+                    return ResponseEntity.ok(updatedStaff);
                 }
             }
             return ResponseEntity.notFound().build();
@@ -193,13 +205,9 @@ public class AdminController {
         }
     }
 
-    // 登出
+    // 登出（Token无状态，前端直接清除Token即可，后端无需特殊处理）
     @PostMapping("/logout")
-    public ResponseEntity<?> logout(HttpServletRequest request, HttpServletResponse response) {
-        HttpSession session = request.getSession(false);
-        if (session != null) {
-            session.invalidate();
-        }
+    public ResponseEntity<?> logout() {
         return ResponseEntity.noContent().build();
     }
 }

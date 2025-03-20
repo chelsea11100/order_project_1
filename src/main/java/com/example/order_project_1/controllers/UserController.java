@@ -2,13 +2,20 @@ package com.example.order_project_1.controllers;
 
 import com.example.order_project_1.models.entity.Users;
 import com.example.order_project_1.services.UserService;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.security.Keys;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import javax.crypto.SecretKey;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 
 @RestController
@@ -17,57 +24,96 @@ public class UserController {
     @Autowired
     private UserService userService;
 
-    // 手动验证用户角色的方法
+    private static final SecretKey SECRET_KEY = Keys.secretKeyFor(SignatureAlgorithm.HS256);
+    private static final String TOKEN_HEADER = "Authorization";
+    private static final String TOKEN_PREFIX = "Bearer ";
+    private static final long EXPIRATION_TIME = 1000 * 60 * 60 * 10; // 10个小时（试一下）
+
+
     private boolean hasRole(HttpServletRequest request, String role) {
-        HttpSession session = request.getSession(false);
-        if (session != null) {
-            Users user = (Users) session.getAttribute("user");
-            if (user != null) {
-                return role.equals(user.getRole());
+        String token = getTokenFromRequest(request);
+        if (token != null) {
+            try {
+                Claims claims = Jwts.parser()
+                        .setSigningKey(SECRET_KEY)
+                        .parseClaimsJws(token.replace(TOKEN_PREFIX, ""))
+                        .getBody();
+                String userRole = claims.get("role", String.class);
+                return role.equals(userRole);
+            } catch (Exception e) {
+                return false;
             }
         }
         return false;
     }
 
+    // 获取 Token
+    private String getTokenFromRequest(HttpServletRequest request) {
+        String header = request.getHeader(TOKEN_HEADER);
+        if (header != null && header.startsWith(TOKEN_PREFIX)) {
+            return header;
+        }
+        return null;
+    }
+
+    // 生成 Token
+    private String generateToken(Users user) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("role", user.getRole());
+        return Jwts.builder()
+                .setClaims(claims)
+                .setSubject(user.getUsername())
+                .setIssuedAt(new Date(System.currentTimeMillis()))
+                .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME))
+                .signWith(SignatureAlgorithm.HS256, SECRET_KEY)
+                .compact();
+    }
+
     @PostMapping("/register")
     public ResponseEntity<Users> registerUser(@RequestBody Users user, HttpServletRequest request) {
-        // 注册不需要角色验证
         Users registeredUser = userService.registerUser(user);
         System.out.println(user.getStudentIdOrEmployeeId());
         return ResponseEntity.ok(registeredUser);
     }
 
     @PostMapping("/login")
-    public ResponseEntity<Users> loginUser(@RequestBody Users user, HttpServletRequest request) {
+    public ResponseEntity<Map<String, Object>> loginUser(@RequestBody Users user, HttpServletRequest request) {
         Optional<Users> optionalUser = userService.loginUser(user.getUsername(), user.getPassword());
         if (optionalUser.isPresent()) {
             Users loggedInUser = optionalUser.get();
-            HttpSession session = request.getSession(true);
-            session.setAttribute("user", loggedInUser);
-            return ResponseEntity.ok(loggedInUser);
+            String token = generateToken(loggedInUser);
+            Map<String, Object> response = new HashMap<>();
+            response.put("user", loggedInUser);
+            response.put("token", token);
+            return ResponseEntity.ok(response);
         }
         return ResponseEntity.status(401).build();
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<Void> logoutUser(HttpServletRequest request, HttpServletResponse response) {
-        HttpSession session = request.getSession(false);
-        if (session != null) {
-            session.invalidate();
-            request.getServletContext().removeAttribute(session.getId());
-        }
+    public ResponseEntity<Void> logoutUser(HttpServletRequest request) {
         return ResponseEntity.noContent().build();
     }
 
     @PutMapping("/profile")
     public ResponseEntity<Users> updateProfile(@RequestBody Users user, HttpServletRequest request) {
         if (hasRole(request, "USER")) {
-            HttpSession session = request.getSession(false);
-            if (session != null) {
-                Users loggedInUser = (Users) session.getAttribute("user");
-                if (loggedInUser != null) {
-                    Users updatedUser = userService.updateUserProfile(loggedInUser.getId(), user);
-                    return ResponseEntity.ok(updatedUser);
+            String token = getTokenFromRequest(request);
+            if (token != null) {
+                try {
+                    Claims claims = Jwts.parser()
+                            .setSigningKey(SECRET_KEY)
+                            .parseClaimsJws(token.replace(TOKEN_PREFIX, ""))
+                            .getBody();
+                    String username = claims.getSubject();
+                    Optional<Users> optionalUser = userService.findUserByUsername(username);
+                    if (optionalUser.isPresent()) {
+                        Users loggedInUser = optionalUser.get();
+                        Users updatedUser = userService.updateUserProfile(loggedInUser.getId(), user);
+                        return ResponseEntity.ok(updatedUser);
+                    }
+                } catch (Exception e) {
+                    return ResponseEntity.status(403).build();
                 }
             }
         }
@@ -77,12 +123,22 @@ public class UserController {
     @GetMapping("/profile")
     public ResponseEntity<Users> getProfile(HttpServletRequest request) {
         if (hasRole(request, "USER")) {
-            HttpSession session = request.getSession(false);
-            if (session != null) {
-                Users loggedInUser = (Users) session.getAttribute("user");
-                if (loggedInUser != null) {
-                    Users userProfile = userService.getUserProfile(loggedInUser.getId());
-                    return ResponseEntity.ok(userProfile);
+            String token = getTokenFromRequest(request);
+            if (token != null) {
+                try {
+                    Claims claims = Jwts.parser()
+                            .setSigningKey(SECRET_KEY)
+                            .parseClaimsJws(token.replace(TOKEN_PREFIX, ""))
+                            .getBody();
+                    String username = claims.getSubject();
+                    Optional<Users> optionalUser = userService.findUserByUsername(username);
+                    if (optionalUser.isPresent()) {
+                        Users loggedInUser = optionalUser.get();
+                        Users userProfile = userService.getUserProfile(loggedInUser.getId());
+                        return ResponseEntity.ok(userProfile);
+                    }
+                } catch (Exception e) {
+                    return ResponseEntity.status(403).build();
                 }
             }
         }

@@ -173,11 +173,12 @@ public class UserService {
         return userRecord != null ? userRecord.getEntity() : null;
     }
 
-    // 删除用户（管理员调用）
-    public void deleteUser(Long userId) {
-        Record<Users, Long> userRecord = userModel.newQuery().find(userId);
-        if (userRecord != null) {
-            userRecord.delete();
+    // 新增方法：根据用户名查找用户
+    public Optional<Users> findUserByUsername(String username) {
+        RecordList<Users, Long> userRecords = userModel.newQuery().where("username", username).get();
+        if (!userRecords.isEmpty()) {
+            return Optional.of(userRecords.get(0).getEntity());
         }
+        return Optional.empty();
     }
 }
