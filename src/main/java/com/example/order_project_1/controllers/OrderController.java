@@ -24,7 +24,9 @@ import java.util.List;
 public class OrderController {
     private static final Logger logger = LoggerFactory.getLogger(OrderController.class);//试一下（引入日志）
 
-    private static final SecretKey SECRET_KEY = Keys.secretKeyFor(SignatureAlgorithm.HS256);
+    @Value("${jwt.secret-key}")
+    private String SECRET_KEY;
+
     private static final String TOKEN_HEADER = "Authorization";
     private static final String TOKEN_PREFIX = "Bearer ";
 

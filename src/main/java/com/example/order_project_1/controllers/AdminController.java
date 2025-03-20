@@ -26,7 +26,9 @@ public class AdminController {
     @Autowired
     private OrderService orderService;
 
-    private static final SecretKey SECRET_KEY = Keys.secretKeyFor(SignatureAlgorithm.HS256);
+    @Value("${jwt.secret-key}")
+    private String SECRET_KEY;
+
     private static final String TOKEN_HEADER = "Authorization";
     private static final String TOKEN_PREFIX = "Bearer ";
 

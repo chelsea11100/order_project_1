@@ -24,7 +24,9 @@ public class UserController {
     @Autowired
     private UserService userService;
 
-    private static final SecretKey SECRET_KEY = Keys.secretKeyFor(SignatureAlgorithm.HS256);
+    @Value("${jwt.secret-key}")
+    private String SECRET_KEY;
+
     private static final String TOKEN_HEADER = "Authorization";
     private static final String TOKEN_PREFIX = "Bearer ";
     private static final long EXPIRATION_TIME = 1000 * 60 * 60 * 10; // 10个小时（试一下）
@@ -33,6 +35,7 @@ public class UserController {
     private boolean hasRole(HttpServletRequest request, String role) {
         String token = getTokenFromRequest(request);
         if (token != null) {
+            System.out.println("已经获取到token在hasrole方法里");
             try {
                 Claims claims = Jwts.parser()
                         .setSigningKey(SECRET_KEY)
@@ -97,6 +100,7 @@ public class UserController {
 
     @PutMapping("/profile")
     public ResponseEntity<Users> updateProfile(@RequestBody Users user, HttpServletRequest request) {
+        System.out.println(hasRole(request, "USER"));
         if (hasRole(request, "USER")) {
             String token = getTokenFromRequest(request);
             if (token != null) {
@@ -122,9 +126,12 @@ public class UserController {
 
     @GetMapping("/profile")
     public ResponseEntity<Users> getProfile(HttpServletRequest request) {
+        System.out.println(hasRole(request, "USER"));
         if (hasRole(request, "USER")) {
+            System.out.println("用户验证成功");
             String token = getTokenFromRequest(request);
             if (token != null) {
+                System.out.println("token获取成功");
                 try {
                     Claims claims = Jwts.parser()
                             .setSigningKey(SECRET_KEY)
