@@ -34,16 +34,24 @@ public class AdminController {
 
     // 从请求中获取Token
     private String extractToken(HttpServletRequest request) {
+        // 1. 获取请求头
         String header = request.getHeader(TOKEN_HEADER);
+
+        // 2. 添加调试日志（关键！）
+        System.out.println("[DEBUG] Authorization Header: " + header);
+
+        // 3. 验证并提取 Token
         if (header != null && header.startsWith(TOKEN_PREFIX)) {
-            return header.replace(TOKEN_PREFIX, "");
+            return header.replace(TOKEN_PREFIX, "").trim(); // 清理多余空格
         }
+
         return null;
     }
 
     // 检查用户是否具有指定角色
     private boolean hasRole(HttpServletRequest request, String role) {
         String token = extractToken(request);
+        System.out.println("token是： "+token);
         if (token != null) {
             try {
                 Claims claims = Jwts.parser().setSigningKey(SECRET_KEY).parseClaimsJws(token).getBody();
@@ -62,6 +70,8 @@ public class AdminController {
         if (token != null) {
             try {
                 Claims claims = Jwts.parser().setSigningKey(SECRET_KEY).parseClaimsJws(token).getBody();
+                Long userId = claims.get("userId", Long.class);
+                System.out.println("[DEBUG] Parsed userId: " + userId);
                 return claims.get("userId", Long.class);
             } catch (Exception e) {
                 return null;
