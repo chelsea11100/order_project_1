@@ -118,6 +118,7 @@ public class UserService {
         if (existingRecord != null) {
             Users currentUser = existingRecord.getEntity();
             currentUser.setUsername(userDetails.getUsername());
+            currentUser.setSpecialty(userDetails.getSpecialty());
             currentUser.setContactinfo(userDetails.getContactinfo());
             currentUser.setAvatar(userDetails.getAvatar());
             existingRecord.save();
@@ -132,18 +133,7 @@ public class UserService {
         return userRecord != null ? userRecord.getEntity() : null;
     }
 
-    public Users updateStaffProfile(Long staffId, Users userDetails) {
-        Record<Users, Long> existingRecord = userModel.newQuery().find(staffId);
-        if (existingRecord != null) {
-            Users currentUser = existingRecord.getEntity();
-            currentUser.setUsername(userDetails.getUsername());
-            currentUser.setSpecialty(userDetails.getSpecialty());
-            currentUser.setContactinfo(userDetails.getContactinfo());
-            existingRecord.save();
-            return currentUser;
-        }
-        return null;
-    }
+
 
     // 更新用户信息
     public Users updateUserProfile(Long userId, Users newUserDetails) {

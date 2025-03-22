@@ -159,7 +159,7 @@ public class AdminController {
     // 管理员修改个人信息
     @PutMapping("/profile")
     public ResponseEntity<Users> updateAdminProfile(@RequestBody Users user, HttpServletRequest request) {
-        if (hasRole(request, "ADMIN")) {
+        if (hasRole(request, "ADMIN")||hasRole(request, "STAFF")) {
             Long userId = getUserIdFromToken(request);
             if (userId != null) {
                 Users updatedAdmin = userService.updateAdminProfile(userId, user);
@@ -190,22 +190,7 @@ public class AdminController {
         }
     }
 
-    // 工作人员修改个人信息
-    @PutMapping("/staff/profile")
-    public ResponseEntity<Users> updateStaffProfile(@RequestBody Users user, HttpServletRequest request) {
-        if (hasRole(request, "STAFF")) {
-            Long userId = getUserIdFromToken(request);
-            if (userId != null) {
-                Users updatedStaff = userService.updateStaffProfile(userId, user);
-                if (updatedStaff != null) {
-                    return ResponseEntity.ok(updatedStaff);
-                }
-            }
-            return ResponseEntity.notFound().build();
-        } else {
-            return ResponseEntity.status(403).build();
-        }
-    }
+
 
     // 登出（Token无状态，前端直接清除Token即可，后端无需特殊处理）
     @PostMapping("/logout")
