@@ -5,13 +5,12 @@ import com.example.order_project_1.models.entity.Orders;
 import gaarason.database.appointment.OrderBy;
 import gaarason.database.contract.eloquent.Record;
 import gaarason.database.contract.eloquent.RecordList;
+import gaarason.database.eloquent.RecordBean;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.time.Duration;
-import java.util.Comparator;
 import java.math.BigDecimal;
 import java.util.stream.Collectors;
 
@@ -133,9 +132,9 @@ public class OrderService {
         }
     }
 
-    // AI自动派单
-    public void autoAssignOrder(Orders order) {
-        if (order.getAccepted() != null) {
+    // **自动派单**
+    public void autoAssignOrder(Orders order, Set<Long> assignedStaffIds) {
+        if (order.getStaffId() != null) {
             return; // 订单已被接单，无需派单
         }
 
@@ -144,64 +143,104 @@ public class OrderService {
             return; // 订单未超时，不触发 AI 派单
         }
 
-        // 获取所有技术人员（role = "STAFF"）
-        List<Users> staffList = userModel.newQuery().where("role", "STAFF").get().stream()
-                .map(Record::getEntity).toList();
-        // 计算 AI 评分并选出最佳工作人员
+        // **获取所有技术人员**
+        List<Users> staffList = userModel.newQuery()
+                .where("role", "STAFF")
+                .get()
+                .stream()
+                .map(Record::getEntity)
+                .filter(staff -> !assignedStaffIds.contains(staff.getId())) // **过滤掉已分配的技术人员**
+                .toList();
+
+        if (staffList.isEmpty()) {
+            System.out.println("没有可用的技术人员");
+            return; // 所有技术人员都已经接单，退出
+        }
+
+        // **计算 AI 评分，选出最优工作人员**
         Optional<Users> bestStaff = staffList.stream()
                 .map(staff -> new StaffScore(staff, calculateAIScore(staff)))
                 .max(Comparator.comparingDouble(StaffScore::score))
                 .map(StaffScore::staff);
 
-        if (bestStaff.isPresent()) {
-            Users assignedStaff = bestStaff.get();
-            order.setStaffId(assignedStaff.getId());
-            order.setAccepted(LocalDateTime.now());
-            order.setStatus("已接单");
-            // 更新数据库
-            orderModel.newQuery().where("id", order.getId()).update(order);
-        }
+        // **分配工单**
+        bestStaff.ifPresent(assignedStaff -> {
+            Orders updatedOrder = new Orders();
+            updatedOrder.setStaffId(assignedStaff.getId());
+            updatedOrder.setAccepted(LocalDateTime.now());
+            updatedOrder.setStatus("已接单");
+
+            orderModel.newQuery().where("id", order.getId()).update(updatedOrder);
+            // **标记该技术员已经被分配**
+            assignedStaffIds.add(assignedStaff.getId());
+        });
     }
-    // **AI 计算评分逻辑**
+
+    // **AI 评分计算逻辑**
     private double calculateAIScore(Users staff) {
-        Long orderCount = getOrderCount(staff.getId());
+        long orderCount = getOrderCount(staff.getId());
         double avgDifficulty = getAvgDifficulty(staff.getId());
         long idleTime = getIdleTime(staff.getId());
         double avgQuality = getAvgQuality(staff.getId());
 
         return (orderCount * 0.3) + (avgDifficulty * 0.2) + (idleTime * 0.3) + (avgQuality * 0.2);
     }
-    // **获取工作人员接单数量**
+
+    // **获取工作人员接单数量（去重）**
     private long getOrderCount(Long staffId) {
-        return  orderModel.newQuery().where("staff_id", staffId).count();
+        // 查询并获取结果，给 COUNT(DISTINCT order_id) 设置别名
+        Object result = performanceModel.newQuery()
+                .where("staff_id", staffId)
+                .selectRaw("COUNT(DISTINCT order_id) AS order_count")
+                .first();
+
+        if (result != null && result instanceof RecordBean) {
+            // 将结果转换为 RecordBean 类型
+            RecordBean record = (RecordBean) result;
+
+            // 假设 RecordBean 提供了 toMap() 方法
+            Map<String, Object> resultMap = record.toMap();
+
+            // 从 Map 中获取 'order_count' 字段的值
+            Object countValue = resultMap.get("order_count");
+
+            // 将值转换为 Long 类型并返回
+            return countValue != null ? Long.parseLong(countValue.toString()) : 0L;
+        }
+
+        return 0L;
     }
-    // **计算工作人员平均订单难度**
+
+    // **计算工作人员平均订单难度（去重）**
     private double getAvgDifficulty(Long staffId) {
-        // 调用查询方法，获取平均难度
-        Object avgDifficultyResult = performanceModel.newQuery().where("staff_id", staffId).avg("workload");
+        // 查询并获取结果，给 AVG(workload) 设置别名
+        Object result = performanceModel.newQuery()
+                .where("staff_id", staffId)
+                .selectRaw("AVG(workload) AS avg_workload")
+                .first();
 
-        // 检查返回结果是否为 null
-        if (avgDifficultyResult == null) {
-            return 0.0;
-        }
+        if (result != null && result instanceof RecordBean) {
+            // 将 RecordBean 转换为 Map
+            RecordBean record = (RecordBean) result;
+            Map<String, Object> resultMap = record.toMap();
 
-        // 检查返回结果的类型并进行转换
-        if (avgDifficultyResult instanceof BigDecimal) {
-            // 如果是 BigDecimal 类型，转换为 double
-            return ((BigDecimal) avgDifficultyResult).doubleValue();
-        } else if (avgDifficultyResult instanceof Double) {
-            // 如果是 Double 类型，直接返回
-            return (Double) avgDifficultyResult;
-        } else {
-            // 如果不是预期的类型，返回默认值 0.0
-            return 0.0;
+            // 获取 "avg_workload" 字段的值
+            Object countValue = resultMap.get("avg_workload");
+
+            if (countValue != null) {
+                // 将值转换为 Double 类型并返回
+                return Double.parseDouble(countValue.toString());
+            }
         }
+        return 0.0; // 如果没有找到字段或转换失败，返回 0.0
     }
+
     // **计算工作人员空窗时间**
     private long getIdleTime(Long staffId) {
         Record<Orders, Long> lastOrder = orderModel.newQuery()
                 .where("staff_id", staffId)
-                .orderBy("completedAt", OrderBy.valueOf("desc"))
+                .whereNotNull("completedAt")
+                .orderBy("completedAt", OrderBy.DESC)
                 .first();
 
         if (lastOrder == null || lastOrder.getEntity().getCompleted() == null) {
@@ -210,30 +249,36 @@ public class OrderService {
 
         return Duration.between(lastOrder.getEntity().getCompleted(), LocalDateTime.now()).toHours();
     }
-    // **计算工作人员的平均服务质量评分**
+
+    // **计算工作人员的平均服务质量评分（去重）**
     private double getAvgQuality(Long staffId) {
-        // 调用查询方法，获取平均质量
-        Object avgQualityResult = performanceModel.newQuery().where("staff_id", staffId).avg("degree");
+        Object avgQualityObj = performanceModel.newQuery()
+                .where("staff_id", staffId)
+                .group("order_id")
+                .selectRaw("AVG(degree) AS avg_degree")  // 给字段起个别名，避免字段名冲突
+                .first();
 
-        // 检查返回结果是否为 null
-        if (avgQualityResult == null) {
-            return 0.0;
-        }
+        if (avgQualityObj != null) {
+            // 使用 RecordBean 时，先转换为 Map 获取值
+            if (avgQualityObj instanceof RecordBean) {
+                RecordBean record = (RecordBean) avgQualityObj;
+                Map<String, Object> resultMap = record.toMap();
 
-        // 检查返回结果的类型并进行转换
-        if (avgQualityResult instanceof BigDecimal) {
-            // 如果是 BigDecimal 类型，转换为 double
-            return ((BigDecimal) avgQualityResult).doubleValue();
-        } else if (avgQualityResult instanceof Double) {
-            // 如果是 Double 类型，直接返回
-            return (Double) avgQualityResult;
-        } else {
-            // 如果不是预期的类型，返回默认值 0.0
-            return 0.0;
+                Object avgDegree = resultMap.get("avg_degree");  // 获取查询结果中的值
+
+                if (avgDegree instanceof Number) {
+                    // 将值转换为 double 并返回
+                    return ((Number) avgDegree).doubleValue();
+                }
+            }
         }
+        // 如果结果为空，则返回 0.0
+        return 0.0;
     }
+
     // **内部类：存储工作人员及其评分**
     private record StaffScore(Users staff, double score) {}
+
     // **定时任务：每 30 分钟检查一次超时订单并执行 AI 自动派单**
     @Scheduled(fixedRate = 30 * 60 * 1000) // 每 30 分钟执行一次
     public void checkAndAssignOrders() {
@@ -248,11 +293,12 @@ public class OrderService {
                 .map(Record::getEntity)
                 .toList();
 
+        // **用于存储已分配的技术人员，避免重复指派**
+        Set<Long> assignedStaffIds = new HashSet<>();
         for (Orders order : pendingOrders) {
-            System.out.println("正在为订单 " + order.getId() + " 进行 AI 自动派单...");
-            autoAssignOrder(order); // 调用 AI 派单逻辑
+            System.out.println("正在为订单 " + order.getId() + " 进行自动派单...");
+            autoAssignOrder(order, assignedStaffIds); // 调用 AI 派单逻辑
         }
-
-        System.out.println("AI 自动派单任务完成");
+        System.out.println("自动派单任务完成");
     }
 }

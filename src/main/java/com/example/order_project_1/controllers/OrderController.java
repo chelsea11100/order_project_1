@@ -218,16 +218,4 @@ public class OrderController {
             return ResponseEntity.status(403).build();
         }
     }
-
-
-    // AI自动派单
-    @PostMapping("/ai-assign")
-    public ResponseEntity<Void> autoAssignOrder(@RequestBody Orders order, HttpServletRequest request) {
-        if (hasRole(request, "ADMIN") || hasRole(request, "STAFF")) {
-            orderService.autoAssignOrder(order);
-            return ResponseEntity.noContent().build();
-        } else {
-            return ResponseEntity.status(403).build();
-        }
-    }
 }
