@@ -99,6 +99,7 @@ public class AdminController {
         }
     }
 
+    //搜索框根据员工id查找员工
     @GetMapping("/staff/{staffId}")
     public ResponseEntity<Users> getStaff(@PathVariable Long staffId, HttpServletRequest request) {
         if (hasRole(request, "ADMIN")) {
@@ -112,6 +113,20 @@ public class AdminController {
             return ResponseEntity.status(403).build();
         }
     }
+
+    //管理员查看所有员工信息的方法
+    @GetMapping("/staff/getStaffs")
+    public ResponseEntity<List<Users>> getStaffs(HttpServletRequest request) {
+        if(hasRole(request,"ADMIN")) {
+            List<Users> users = userService.getStaffs();
+            return  ResponseEntity.ok(users);
+        }
+        else {
+            return ResponseEntity.status(403).build();
+        }
+    }
+
+
 
     // 管理员和工作人员查看所有未接订单
     @GetMapping("/orders/unassigned")

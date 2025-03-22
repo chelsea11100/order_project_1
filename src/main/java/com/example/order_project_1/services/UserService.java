@@ -90,6 +90,12 @@ public class UserService {
         return userRecord != null ? userRecord.getEntity() : null;
     }
 
+    //管理人员查看所有工作人员信息
+    public List<Users> getStaffs(){
+        RecordList<Users,Long> staffRecords = userModel.newQuery().where("role","STAFF").get();
+        return staffRecords.stream().map(Record::getEntity).toList();
+    }
+
     // 管理员和工作人员查看所有未接订单及管理员手动派单
     public List<Orders> findUnassignedOrders() {
         RecordList<Orders, Long> orderRecords = orderModel.newQuery().where("status", "received").get();
