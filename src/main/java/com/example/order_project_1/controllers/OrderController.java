@@ -69,7 +69,7 @@ public class OrderController {
 
 
     // 用户创建订单
-    @PostMapping
+    @PostMapping("/creatDetail")
     public ResponseEntity<Orders> createOrder(@RequestBody Orders order, HttpServletRequest request) {
         if (order == null) {
             logger.error("创建订单时，传入的订单对象为空");
