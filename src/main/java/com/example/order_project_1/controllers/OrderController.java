@@ -5,8 +5,6 @@ import com.example.order_project_1.services.OrderService;
 import com.example.order_project_1.services.PerformanceService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
-import io.jsonwebtoken.security.Keys;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -16,7 +14,6 @@ import org.springframework.web.bind.annotation.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.crypto.SecretKey;
 import java.util.List;
 
 @RestController
@@ -71,26 +68,40 @@ public class OrderController {
     // 用户创建订单
     @PostMapping("/creatDetail")
     public ResponseEntity<Orders> createOrder(@RequestBody Orders order, HttpServletRequest request) {
+        // 检查订单对象是否为空
         if (order == null) {
             logger.error("创建订单时，传入的订单对象为空");
             return ResponseEntity.badRequest().build();
         }
+
+        // 检查用户是否有权限创建订单
         if (!hasRole(request, "USER")) {
             logger.warn("用户没有创建订单的权限，请求被拒绝");
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Orders());
         }
+
+        // 从 Token 中获取当前用户的 user_id
+        Long userId = getUserIdFromToken(request);
+        if (userId == null) {
+            logger.error("无法从 Token 中获取用户 ID");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new Orders());
+        }
+
+        // 设置 user_id
+        order.setUserId(userId);
+
         try {
+            // 调用服务层创建订单
             Orders createdOrder = orderService.createOrder(order);
             logger.info("订单创建成功，订单 ID: {}", createdOrder.getId());
             return ResponseEntity.ok(createdOrder);
         } catch (Exception e) {
-            logger.error("创建订单时发生异常", e);
+            logger.error("创建订单时发生未知异常", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new Orders());
         }
     }
 
 
-    // 用户填写订单反馈（涉及result和userfeedback）
     @PostMapping("/{orderId}/feedback")
     public ResponseEntity<Void> submitOrderFeedback(
             @PathVariable Long orderId,
@@ -98,11 +109,30 @@ public class OrderController {
             @RequestParam String result,
             HttpServletRequest request) {
 
-        if (hasRole(request, "USER")) {
-            orderService.submitOrderFeedback(orderId, feedback, result);
+        // 检查用户是否有权限提交反馈
+        if (!hasRole(request, "USER")) {
+            logger.warn("用户没有提交反馈的权限，请求被拒绝");
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
+        // 从 Token 中获取当前用户的 user_id
+        Long userId = getUserIdFromToken(request);
+        if (userId == null) {
+            logger.error("无法从 Token 中获取用户 ID");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        try {
+            // 调用服务层提交反馈
+            orderService.submitOrderFeedback(orderId, feedback, result, userId);
+            logger.info("用户 {} 成功为订单 {} 提交反馈", userId, orderId);
             return ResponseEntity.ok().build();
-        } else {
-            return ResponseEntity.status(403).build();
+        } catch (IllegalArgumentException e) {
+            logger.error("提交反馈时发生参数错误: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+        } catch (Exception e) {
+            logger.error("提交反馈时发生未知异常", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 

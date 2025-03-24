@@ -2,19 +2,15 @@ package com.example.order_project_1.controllers;
 
 import com.example.order_project_1.models.entity.Orders;
 import com.example.order_project_1.models.entity.Users;
-import com.example.order_project_1.services.OrderService;
 import com.example.order_project_1.services.UserService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
-import io.jsonwebtoken.security.Keys;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import javax.crypto.SecretKey;
 import java.util.List;
 
 @RestController

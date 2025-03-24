@@ -34,6 +34,7 @@ public class UserController {
 
     private boolean hasRole(HttpServletRequest request, String role) {
         String token = getTokenFromRequest(request);
+        System.out.println("token"+token);
         if (token != null) {
             System.out.println("已经获取到token在hasrole方法里");
             try {
@@ -101,7 +102,7 @@ public class UserController {
 
     @PutMapping("/profile")
     public ResponseEntity<Users> updateProfile(@RequestBody Users user, HttpServletRequest request) {
-        System.out.println(hasRole(request, "USER"));
+        System.out.println("dddddd"+hasRole(request, "USER"));
         if (hasRole(request, "USER")) {
             String token = getTokenFromRequest(request);
             if (token != null) {

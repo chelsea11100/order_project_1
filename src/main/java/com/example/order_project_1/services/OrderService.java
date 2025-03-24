@@ -122,14 +122,23 @@ public class OrderService {
     }
 
     // 用户评价订单
-    public void submitOrderFeedback(Long orderId, String feedback, String result) {
+    public void submitOrderFeedback(Long orderId, String feedback, String result, Long userId) {
+        // 查询订单
         Record<Orders, Long> orderRecord = orderModel.newQuery().find(orderId);
-        if (orderRecord != null) {
-            Orders existingOrder = orderRecord.getEntity();
-            existingOrder.setResult(result);
-            existingOrder.setUserfeedback(feedback);
-            orderRecord.save();
+        if (orderRecord == null) {
+            throw new IllegalArgumentException("订单不存在");
         }
+
+        // 验证订单的所有者是否为当前用户
+        Orders existingOrder = orderRecord.getEntity();
+        if (!existingOrder.getUserId().equals(userId)) {
+            throw new IllegalArgumentException("用户无权操作此订单");
+        }
+
+        // 更新订单的反馈和结果
+        existingOrder.setResult(result);
+        existingOrder.setUserfeedback(feedback);
+        orderRecord.save();
     }
 
     // **自动派单**
