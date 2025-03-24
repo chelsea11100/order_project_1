@@ -168,9 +168,10 @@ public class OrderController {
 
 
     // 查询历史订单
-    @GetMapping("/user/{userId}/history")
-    public ResponseEntity<List<Orders>> getOrderHistory(@PathVariable Long userId, HttpServletRequest request) {
+    @GetMapping("/user/history")
+    public ResponseEntity<List<Orders>> getOrderHistory(HttpServletRequest request) {
         if (hasRole(request, "USER") || hasRole(request, "STAFF")) {
+            Long userId = getUserIdFromToken(request);
             List<Orders> orders = orderService.getOrderHistory(userId);
             return ResponseEntity.ok(orders);
         } else {
@@ -193,7 +194,7 @@ public class OrderController {
     }
 
 
-    // 取消订单（重点改造部分）
+    // 取消订单
     @PostMapping("/{orderId}/cancel")
     public ResponseEntity<Boolean> cancelOrder(@PathVariable Long orderId, HttpServletRequest request) {
         Long userId = getUserIdFromToken(request);
