@@ -197,6 +197,18 @@ public class PerformanceService {
         return records.stream().map(Record::getEntity).toList();
     }
 
+    //admin获取所有工作人员的绩效
+    public List<PerformanceRecords> getAllPerformanceRecords() {
+        // 1. 创建查询（不添加任何过滤条件）
+        RecordList<PerformanceRecords, Long> records = performanceRecordModel.newQuery()
+                .get(); // 直接获取所有记录
+
+        // 2. 转换为实体列表（与 getPerformanceRecordsByStaffId 保持格式一致）
+        return records.stream()
+                .map(Record::getEntity)
+                .toList();
+    }
+
     public PerformanceRecords updatePerformance(Long performanceId, Double newWorkload) {
         Record<PerformanceRecords, Long> record = performanceRecordModel.newQuery().find(performanceId);
         if (record != null) {

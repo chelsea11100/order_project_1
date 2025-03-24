@@ -58,8 +58,8 @@ public class Orders extends BaseEntity {
     @Column(name = "image", nullable = true)
     private String image;
 
-    @Column(name = "contaclnfo", nullable = true)
-    private String contaclnfo;
+    @Column(name = "contactInfo", nullable = true)
+    private String contactInfo;
 
 
 
