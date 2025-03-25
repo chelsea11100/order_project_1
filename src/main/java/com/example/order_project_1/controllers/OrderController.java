@@ -1,6 +1,8 @@
 package com.example.order_project_1.controllers;
 
+import com.example.order_project_1.DTO.OrderHistoryResponse;
 import com.example.order_project_1.models.entity.Orders;
+import com.example.order_project_1.models.entity.PerformanceRecords;
 import com.example.order_project_1.services.OrderService;
 import com.example.order_project_1.services.PerformanceService;
 import io.jsonwebtoken.Claims;
@@ -34,12 +36,14 @@ public class OrderController {
 
     private String getTokenFromRequest(HttpServletRequest request) {
         String header = request.getHeader(TOKEN_HEADER);
+
         return header != null && header.startsWith(TOKEN_PREFIX) ?
                 header.replace(TOKEN_PREFIX, "") : null;
     }
 
     private boolean hasRole(HttpServletRequest request, String role) {
         String token = getTokenFromRequest(request);
+        System.out.println("token"+token);
         if (token == null) return false;
 
         try {
@@ -162,18 +166,42 @@ public class OrderController {
 
     // 管理员查看所有订单
     @GetMapping("/all")
-    public List<Orders> getAllOrders() {
-        return orderService.getAllOrders();
+    public ResponseEntity<OrderHistoryResponse> getAllOrders() {
+        List<Orders> orders=orderService.getAllOrders();
+        List<PerformanceRecords> performanceRecords = performanceRecordService.getAllPerformanceRecords();
+        OrderHistoryResponse response = new OrderHistoryResponse(orders, performanceRecords);
+        return ResponseEntity.ok(response);
     }
 
 
     // 查询历史订单
     @GetMapping("/user/history")
-    public ResponseEntity<List<Orders>> getOrderHistory(HttpServletRequest request) {
+    public ResponseEntity<OrderHistoryResponse> getOrderHistory(HttpServletRequest request) {
         if (hasRole(request, "USER") || hasRole(request, "STAFF")) {
             Long userId = getUserIdFromToken(request);
-            List<Orders> orders = orderService.getOrderHistory(userId);
-            return ResponseEntity.ok(orders);
+
+            // 根据角色获取订单数据
+            List<Orders> orders;
+            if (hasRole(request, "USER")) {
+                orders = orderService.getOrderHistory(userId);
+                System.out.println("已获取到了orders");
+            } else {
+                orders = orderService.getOrderHistory_1(userId); // <-- 注意检查方法名是否需要统一
+
+            }
+
+            // 获取绩效记录
+            List<PerformanceRecords> performanceRecords = performanceRecordService.getPerformanceRecordsByStaffId(userId);
+            if(performanceRecords!=null) {
+                System.out.println("已获取到了performanceRecords");
+            }
+
+            // 组合响应对象
+            OrderHistoryResponse response = new OrderHistoryResponse(orders, performanceRecords);
+            if(response!=null) {
+                System.out.println("已获取到response");
+            }
+            return ResponseEntity.ok(response);
         } else {
             return ResponseEntity.status(403).build();
         }

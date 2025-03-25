@@ -1,11 +1,12 @@
 package com.example.order_project_1.controllers;
 
+import com.example.order_project_1.DTO.OrderHistoryResponse;
+import com.example.order_project_1.models.entity.Orders;
 import com.example.order_project_1.models.entity.PerformanceRecords;
+import com.example.order_project_1.services.OrderService;
 import com.example.order_project_1.services.PerformanceService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
-import io.jsonwebtoken.security.Keys;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -13,7 +14,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import javax.crypto.SecretKey;
 import java.util.List;
 
 @RestController
@@ -21,6 +21,10 @@ import java.util.List;
 public class PerformanceController {
     @Autowired
     private PerformanceService performanceService;
+
+    @Autowired
+    private OrderService orderService;
+
 
     @Value("${jwt.secret-key}")
     private String SECRET_KEY;
@@ -77,7 +81,7 @@ public class PerformanceController {
 
     // 工作人员获取自己绩效记录（可以了）
     @GetMapping("/staff/performance")
-    public ResponseEntity<List<PerformanceRecords>> getPerformanceRecordsByStaffId(HttpServletRequest request) {
+    public ResponseEntity<OrderHistoryResponse> getPerformanceRecordsByStaffId(HttpServletRequest request) {
         if (!hasRole(request, "STAFF")) {
             return ResponseEntity.status(403).build(); // 403 Forbidden
         }
@@ -91,12 +95,14 @@ public class PerformanceController {
 
         // 3. 查询数据
         List<PerformanceRecords> records = performanceService.getPerformanceRecordsByStaffId(staffId);
-        return ResponseEntity.ok(records);
+        List<Orders> orders = orderService.getOrderHistory_1(staffId);
+        OrderHistoryResponse response = new OrderHistoryResponse(orders, records);
+        return ResponseEntity.ok(response);
     }
 
     //管理员获取所有绩效记录（这个可以了）
     @GetMapping("/performance")
-    public ResponseEntity<List<PerformanceRecords>> getAllPerformanceRecords(HttpServletRequest request) {
+    public ResponseEntity<OrderHistoryResponse> getAllPerformanceRecords(HttpServletRequest request) {
         // 1. 校验管理员权限
         if (!hasRole(request, "ADMIN")) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
@@ -104,12 +110,25 @@ public class PerformanceController {
 
         // 2. 查询所有绩效记录
         try {
+            Long staffId = getUserIdFromToken(request);
             List<PerformanceRecords> records = performanceService.getAllPerformanceRecords();
-            return ResponseEntity.ok(records);
+            List<Orders> orders = orderService.getOrderHistory_1(staffId);
+            if(records!=null) {
+                System.out.println("records以获取");
+            }
+            if(orders!=null) {
+                System.out.println("orders已获取");
+            }
+            OrderHistoryResponse response = new OrderHistoryResponse(orders, records);
+            if(response!=null) {
+                System.out.println("response以获取");
+            }
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
+
     // 修改绩效记录（可以了）
     @PutMapping("/{performanceId}")
     public ResponseEntity<PerformanceRecords> updatePerformance(@PathVariable Long performanceId, @RequestBody PerformanceRecords record, HttpServletRequest request) {

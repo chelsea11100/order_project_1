@@ -79,7 +79,7 @@ public class OrderService {
         return records.stream().map(Record::getEntity).toList();
     }
 
-    // 查询历史订单
+    // 用户查询历史订单
 
     public List<Orders> getOrderHistory(Long userId) {
         RecordList<Orders, Long> records = orderModel.newQuery()
@@ -88,6 +88,16 @@ public class OrderService {
                 .get();
         return records.stream().map(Record::getEntity).toList();
     }
+
+    //工作人员查询历史订单
+    public List<Orders> getOrderHistory_1(Long userId) {
+        RecordList<Orders, Long> records = orderModel.newQuery()
+                .where("staff_id", userId)
+                .where("status", "<>", "已取消")
+                .get();
+        return records.stream().map(Record::getEntity).toList();
+    }
+
 
     // 查看订单详情
     public Orders getOrderDetails(Long orderId) {
