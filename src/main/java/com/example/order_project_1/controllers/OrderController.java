@@ -258,9 +258,9 @@ public class OrderController {
 
     // 工作人员更新订单状态
     @PutMapping("/{orderId}/status")
-    public ResponseEntity<Orders> updateOrderStatus(@PathVariable Long orderId, @RequestParam String status, HttpServletRequest request) {
+    public ResponseEntity<Orders> updateOrderStatus(@PathVariable Long orderId, HttpServletRequest request) {
         if (hasRole(request, "STAFF")) {
-            Orders updatedOrder = orderService.updateOrderStatus(orderId, status);
+            Orders updatedOrder = orderService.updateOrderStatus(orderId,"已完成");
             return ResponseEntity.ok(updatedOrder);
         } else {
             return ResponseEntity.status(403).build();
