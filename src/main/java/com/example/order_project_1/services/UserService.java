@@ -98,6 +98,7 @@ public class UserService {
         if (orderRecord != null) {
             Orders order = orderRecord.getEntity();
             order.setStaffId(staffId);
+            order.setStatus("已接单");
             orderRecord.save();
             return order;
         }

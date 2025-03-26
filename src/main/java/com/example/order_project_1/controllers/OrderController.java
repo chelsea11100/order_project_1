@@ -129,6 +129,10 @@ public class OrderController {
         try {
             // 调用服务层提交反馈
             orderService.submitOrderFeedback(orderId, feedback, result, userId);
+            Orders order = orderService.getOrderDetails(orderId);
+            if (order != null) {
+                performanceRecordService.evaluateWorkload(order);
+            }
             logger.info("用户 {} 成功为订单 {} 提交反馈", userId, orderId);
             return ResponseEntity.ok().build();
         } catch (IllegalArgumentException e) {
@@ -264,17 +268,5 @@ public class OrderController {
     }
 
 
-    // 交给AI通过feedback设定工作量（评分）
-    @PostMapping("/{orderId}/feedbacks")
-    public ResponseEntity<Void> submitFeedback(@PathVariable Long orderId, HttpServletRequest request) {
-        if (hasRole(request, "USER") || hasRole(request, "STAFF") || hasRole(request, "ADMIN")) {
-            Orders order = orderService.getOrderDetails(orderId);
-            if (order != null) {
-                performanceRecordService.evaluateWorkload(order);
-            }
-            return ResponseEntity.noContent().build();
-        } else {
-            return ResponseEntity.status(403).build();
-        }
-    }
+
 }
