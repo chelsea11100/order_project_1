@@ -154,6 +154,27 @@ public class AdminController {
         }
     }
 
+    //工作人员手动接单
+    @PostMapping("/orders/{orderId}/accept")
+    public ResponseEntity<Orders> acceptOrder(
+            @PathVariable Long orderId,
+            HttpServletRequest request
+    ) {
+        // 检查当前用户是否为员工（STAFF角色）
+        if (hasRole(request, "STAFF")) {
+            // 从请求中获取当前员工的ID
+            Long staffId = getUserIdFromToken(request);
+            Orders updatedOrder = userService.acceptOrder(orderId, staffId);
+            if (updatedOrder != null) {
+                return ResponseEntity.ok(updatedOrder);
+            } else {
+                return ResponseEntity.notFound().build();
+            }
+        } else {
+            return ResponseEntity.status(403).build();
+        }
+    }
+
     // 展示管理员个人信息
     @GetMapping("/profile")
     public ResponseEntity<Users> getAdminProfile(HttpServletRequest request) {

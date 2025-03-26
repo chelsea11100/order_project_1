@@ -25,6 +25,7 @@ public class OrderService {
     private PerformanceRecords.Model performanceModel;
     @Resource
     private Users.Model userModel;
+
     // 用户创建订单
     public Orders createOrder(Orders order) {
         // 获取当前时间
@@ -296,7 +297,8 @@ public class OrderService {
     }
 
     // **内部类：存储工作人员及其评分**
-    private record StaffScore(Users staff, double score) {}
+    private record StaffScore(Users staff, double score) {
+    }
 
     // **定时任务：每 30 分钟检查一次超时订单并执行 AI 自动派单**
     @Scheduled(fixedRate = 30 * 60 * 1000) // 每 30 分钟执行一次
@@ -319,5 +321,91 @@ public class OrderService {
             autoAssignOrder(order, assignedStaffIds); // 调用 AI 派单逻辑
         }
         System.out.println("自动派单任务完成");
+    }
+
+    @Scheduled(fixedRate = 30 * 1000) // 30秒
+    public void autoUpdateUserStatus() {
+        // 查询所有状态为“空闲”或“接单中”的用户
+        List<Users> users = userModel.newQuery()
+                .whereIn("user_status", List.of("空闲", "接单中"))
+                .get()
+                .stream()
+                .map(Record::getEntity)
+                .toList();
+
+        // 遍历处理每个用户
+        for (Users user : users) {
+            updateStatusBasedOnOrders(user);
+        }
+    }
+
+    private void updateStatusBasedOnOrders(Users user) {
+        Long staffId = user.getId();
+        String currentStatus = user.getUser_status();
+
+        // 查询该用户的所有订单
+        List<Orders> orders = orderModel.newQuery()
+                .where("staff_id", staffId)
+                .get()
+                .stream()
+                .map(Record::getEntity)
+                .toList();
+
+        // 根据订单状态更新用户状态
+        if ("空闲".equals(currentStatus)) {
+            handleIdleUser(user, orders);
+        } else if ("接单中".equals(currentStatus)) {
+            handleBusyUser(user, orders);
+        }
+    }
+
+    /**
+     * 处理状态为“空闲”的用户
+     */
+    private void handleIdleUser(Users user, List<Orders> orders) {
+        // 检查是否存在至少一个“已接单”订单
+        boolean hasAcceptedOrder = orders.stream()
+                .anyMatch(order -> "已接单".equals(order.getStatus()));
+
+        if (hasAcceptedOrder) {
+            // 通过用户ID查询用户记录
+            Record<Users, Long> userRecord = userModel.newQuery().find(user.getId());
+            if (userRecord != null) {
+                // 获取用户实体并更新状态
+                Users updatedUser = userRecord.getEntity();
+                updatedUser.setUser_status("接单中");
+
+                // 保存更新后的记录
+                userRecord.save();
+                System.out.println("✅ 用户 " + user.getId() + " 状态更新为 [接单中]");
+            } else {
+                System.err.println("⚠️ 用户记录不存在，ID=" + user.getId());
+            }
+        }
+    }
+
+    /**
+     * 处理状态为“接单中”的用户
+     */
+    private void handleBusyUser(Users user, List<Orders> orders) {
+        // 检查是否所有订单都不是“已接单”状态
+        boolean allOrdersNotAccepted = orders.stream()
+                .allMatch(order -> !"已接单".equals(order.getStatus()));
+
+        if (allOrdersNotAccepted) {
+            // 通过用户ID查询用户记录
+            Record<Users, Long> userRecord = userModel.newQuery().find(user.getId());
+            if (userRecord != null) {
+                // 获取用户实体并更新状态
+                Users updatedUser = userRecord.getEntity();
+                updatedUser.setUser_status("空闲");
+
+                // 保存更新后的记录
+                userRecord.save();
+                System.out.println("✅ 用户 " + user.getId() + " 状态更新为 [空闲]");
+            } else {
+                System.err.println("⚠️ 用户记录不存在，ID=" + user.getId());
+            }
+        }
     }
 }

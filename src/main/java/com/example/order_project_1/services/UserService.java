@@ -105,6 +105,21 @@ public class UserService {
         return null;
     }
 
+    //工作人员手动接单
+    public Orders acceptOrder(Long orderId, Long staffId) {
+        // 查询订单记录
+        Record<Orders, Long> orderRecord = orderModel.newQuery().find(orderId);
+        if (orderRecord != null) {
+            Orders order = orderRecord.getEntity();
+            // 设置接单员工ID并更新状态
+            order.setStaffId(staffId);
+            order.setStatus("已接单");
+            orderRecord.save();
+            return order;
+        }
+        return null;
+    }
+
     // 管理员查看和修改自己的信息
     public Users getAdminProfile(Long adminId) {
         Record<Users, Long> userRecord = userModel.newQuery().find(adminId);

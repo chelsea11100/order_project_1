@@ -6,10 +6,12 @@ import cn.hutool.json.JSONArray;
 import cn.hutool.json.JSONObject;
 import com.example.order_project_1.models.entity.Orders;
 import com.example.order_project_1.models.entity.PerformanceRecords;
+import com.example.order_project_1.models.entity.Users;
 import gaarason.database.contract.eloquent.Record;
 import gaarason.database.contract.eloquent.RecordList;
 
 import jakarta.annotation.Resource;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -23,6 +25,8 @@ public class PerformanceService {
 
     @Resource
     PerformanceRecords.Model performanceRecordModel;
+    @Resource
+    private Users.Model userModel;
     private static final String MODEL_NAME = "deepseek-r1:7b";
     private static final String OLLAMA_API_URL = "https://sc-lapp03.gcu.edu.cn/api/chat";
     // 部署好的 API 的 URL
@@ -38,15 +42,17 @@ public class PerformanceService {
         String feedback = order.getUserfeedback();
         Double workload = null;
         Double degree = null;
-        Double salary;
+        Double salary;//这个是总分
 
         try {
+            System.out.println("已进入方法");
             // 评估工作量
-            JSONObject workloadRequestBody = buildRequestBody("根据以下维护情况用数字（1-5分）评估工作量：" + problemDescription);
+            JSONObject workloadRequestBody = buildRequestBody("根据以下维护情况用数字（1~5分可以为小数）评估工作量：" + problemDescription);
             HttpResponse workloadResponse = HttpRequest.post(OLLAMA_API_URL)
                     .header("Content-Type", "application/json; charset=UTF-8")
                     .body(workloadRequestBody.toString())
                     .execute();
+            System.out.println("workloadResponse.isOk(): "+workloadResponse.isOk());
             if (workloadResponse.isOk()) {
                 String workloadResponseStr = workloadResponse.body();
                 JSONObject workloadResponseJson = new JSONObject(workloadResponseStr);
@@ -58,7 +64,7 @@ public class PerformanceService {
 
 
                 if (workloadResultText_1 != null) {
-                    Pattern workloadPattern = Pattern.compile("[1-5]");
+                    Pattern workloadPattern = Pattern.compile("([1-5](\\.\\d+)?)");
                     Matcher workloadMatcher = workloadPattern.matcher(workloadResultText_1);
                     if (workloadMatcher.find()) {
                         workload = Double.parseDouble(workloadMatcher.group());
@@ -72,7 +78,7 @@ public class PerformanceService {
             }
 
             // 评估满意度
-            JSONObject degreeRequestBody = buildRequestBody("根据以下用户对维修结果的评价评估满意度返回一个数字（满分 5 分，返回 1 - 5 的数字），只要一个数字：" + feedback);
+            JSONObject degreeRequestBody = buildRequestBody("根据以下用户对维修结果的评价评估满意度返回一个数字（满分 5 分，返回 1 ~5 的数字可以为小数），只要一个数字：" + feedback);
             HttpResponse degreeResponse = HttpRequest.post(OLLAMA_API_URL)
                     .header("Content-Type", "application/json; charset=UTF-8")
                     .body(degreeRequestBody.toString())
@@ -99,7 +105,7 @@ public class PerformanceService {
             }
 
             // 计算工资
-            salary = 100 * workload + degree * 44;
+            salary = workload + degree ;
 
             PerformanceRecords record = new PerformanceRecords();
             record.setStaffId(order.getStaffId());
@@ -107,7 +113,7 @@ public class PerformanceService {
             record.setOrderId(order.getId());
             record.setWorkload(workload.toString());
             record.setDegree(degree);
-            record.setSalary(salary.toString());
+            record.setSalary(salary);
 
             // 插入记录并获取插入记录的ID
             Long insertedId = performanceRecordModel.newQuery().insertGetId(record);
@@ -115,6 +121,7 @@ public class PerformanceService {
                 // 根据ID查询插入的记录
                 Record<PerformanceRecords, Long> savedRecord = performanceRecordModel.newQuery().find(insertedId);
                 if (savedRecord != null) {
+                    System.out.println("已获取到");
                     return savedRecord.getEntity();
                 }
             }
@@ -218,5 +225,55 @@ public class PerformanceService {
             return entity;
         }
         return null;
+    }
+    @Scheduled(cron = "0 0 1 1 * ?")  // 每月1号凌晨1点执行
+    public void updateMonthlyPerformance() {
+        // 1. 获取所有员工（角色为STAFF）
+        List<Users> staffUsers = userModel.newQuery()
+                .where("role", "STAFF")  // 筛选角色为STAFF的员工
+                .get()
+                .stream()
+                .map(Record::getEntity)  // 转换为实体类
+                .toList();
+
+        // 2. 遍历每个员工，计算平均绩效
+        for (Users user : staffUsers) {
+            Long staffId = user.getId();
+
+            // 3. 查询该员工的所有薪资记录
+            List<PerformanceRecords> performanceRecords = performanceRecordModel.newQuery()
+                    .where("staff_id", staffId)
+                    .get()
+                    .stream()
+                    .map(Record::getEntity)  // 转换为实体类
+                    .toList();
+
+            // 4. 计算平均薪资
+            double totalSalary = 0.0;
+            int count = 0;
+            for (PerformanceRecords record : performanceRecords) {
+                totalSalary +=record.getSalary();
+                count++;
+            }
+            Double avgSalary = (count > 0) ? totalSalary / count : null;
+
+            // 5. 更新用户表的总绩效
+            if (avgSalary != null) {
+                // 重新查询用户记录（确保操作最新数据）
+                Record<Users, Long> currentUserRecord = userModel.newQuery().find(staffId);
+                if (currentUserRecord != null) {
+                    Users updatedUser = currentUserRecord.getEntity();
+                    updatedUser.setTotal_performance(avgSalary);
+                    currentUserRecord.save();  // 保存更新
+                    System.out.println("✅ 员工ID=" + staffId + "，平均绩效已更新为：" + avgSalary);
+                } else {
+                    System.err.println("⚠️ 用户记录不存在，ID=" + staffId);
+                }
+            } else {
+                System.out.println("员工ID=" + staffId + " 无有效绩效记录");
+            }
+        }
+
+        System.out.println("月度绩效更新完成");
     }
 }

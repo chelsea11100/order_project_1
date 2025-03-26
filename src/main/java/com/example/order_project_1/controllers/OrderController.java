@@ -3,8 +3,10 @@ package com.example.order_project_1.controllers;
 import com.example.order_project_1.DTO.OrderHistoryResponse;
 import com.example.order_project_1.models.entity.Orders;
 import com.example.order_project_1.models.entity.PerformanceRecords;
+import com.example.order_project_1.models.entity.Users;
 import com.example.order_project_1.services.OrderService;
 import com.example.order_project_1.services.PerformanceService;
+import gaarason.database.contract.eloquent.Record;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import jakarta.servlet.http.HttpServletRequest;
@@ -12,6 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.web.bind.annotation.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -215,14 +218,11 @@ public class OrderController {
     // 查看订单详情
     @GetMapping("/{orderId}")
     public ResponseEntity<Orders> getOrderDetails(@PathVariable Long orderId, HttpServletRequest request) {
-        if ( hasRole(request, "STAFF") || hasRole(request, "ADMIN")) {
+
             Orders order = orderService.getOrderDetails(orderId);
             return order != null ?
                     ResponseEntity.ok(order) :
                     ResponseEntity.notFound().build();
-        } else {
-            return ResponseEntity.status(403).build();
-        }
     }
 
 
@@ -266,6 +266,7 @@ public class OrderController {
             return ResponseEntity.status(403).build();
         }
     }
+
 
 
 

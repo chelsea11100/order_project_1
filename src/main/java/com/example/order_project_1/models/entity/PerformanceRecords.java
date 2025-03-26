@@ -35,7 +35,7 @@ public class PerformanceRecords extends BaseEntity {
     private String workload;
 
     @Column(name = "salary")
-    private String salary;
+    private Double salary;
 
     @Column(name = "createdAt")
     private LocalDateTime createdat;

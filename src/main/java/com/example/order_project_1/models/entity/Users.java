@@ -46,6 +46,11 @@ public class Users extends BaseEntity {
     @Column(name = "avatar", nullable = true)
     private String avatar;
 
+    @Column(name = "user_status", nullable = true, length = 3L)
+    private String user_status;
+
+    @Column(name = "total_performance")
+    private Double total_performance;
     /** auto generator end **/
 
     @Repository
