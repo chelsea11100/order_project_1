@@ -58,6 +58,7 @@ public class UserService {
     // 管理员管理工作人员
     public Users addStaff(Users user) {
         user.setRole("STAFF");
+        user.setCreatedat(LocalDateTime.now());
         // 使用 insertGetId 方法获取插入记录的 ID
         Long insertedId = userModel.newQuery().insertGetId(user);
         if (insertedId != null) {
@@ -74,16 +75,6 @@ public class UserService {
         userModel.newQuery().where("id", staffId).delete();
     }
 
-    public Users updateStaffPermissions(Long staffId, Users user) {
-        Record<Users, Long> existingRecord = userModel.newQuery().find(staffId);
-        if (existingRecord != null) {
-            Users currentUser = existingRecord.getEntity();
-            currentUser.setRole(user.getRole());
-            existingRecord.save();
-            return currentUser;
-        }
-        return null;
-    }
 
     public Users getStaff(Long staffId) {
         Record<Users, Long> userRecord = userModel.newQuery().find(staffId);
@@ -98,7 +89,7 @@ public class UserService {
 
     // 管理员和工作人员查看所有未接订单及管理员手动派单
     public List<Orders> findUnassignedOrders() {
-        RecordList<Orders, Long> orderRecords = orderModel.newQuery().where("status", "received").get();
+        RecordList<Orders, Long> orderRecords = orderModel.newQuery().where("status", "待处理").get();
         return orderRecords.stream().map(Record::getEntity).toList();
     }
 

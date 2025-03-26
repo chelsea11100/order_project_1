@@ -211,7 +211,7 @@ public class OrderController {
     // 查看订单详情
     @GetMapping("/{orderId}")
     public ResponseEntity<Orders> getOrderDetails(@PathVariable Long orderId, HttpServletRequest request) {
-        if (hasRole(request, "USER") || hasRole(request, "STAFF") || hasRole(request, "ADMIN")) {
+        if ( hasRole(request, "STAFF") || hasRole(request, "ADMIN")) {
             Orders order = orderService.getOrderDetails(orderId);
             return order != null ?
                     ResponseEntity.ok(order) :

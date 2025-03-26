@@ -97,14 +97,7 @@ public class AdminController {
         }
     }
 
-    @PutMapping("/staff/{staffId}/permissions")
-    public ResponseEntity<Users> updateStaffPermissions(@PathVariable Long staffId, @RequestBody Users user, HttpServletRequest request) {
-        if (hasRole(request, "ADMIN")) {
-            return ResponseEntity.ok(userService.updateStaffPermissions(staffId, user));
-        } else {
-            return ResponseEntity.status(403).build();
-        }
-    }
+
 
     //搜索框根据员工id查找员工
     @GetMapping("/staff/{staffId}")
@@ -148,7 +141,7 @@ public class AdminController {
 
     // 手动派单给工作人员
     @PostMapping("/orders/{orderId}/assign")
-    public ResponseEntity<Orders> assignOrderToStaff(@PathVariable Long orderId, @RequestBody Long staffId, HttpServletRequest request) {
+    public ResponseEntity<Orders> assignOrderToStaff(@PathVariable Long orderId, @RequestParam Long staffId, HttpServletRequest request) {
         if (hasRole(request, "ADMIN")) {
             Orders updatedOrder = userService.assignOrderToStaff(orderId, staffId);
             if (updatedOrder != null) {
