@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 @RestController
-@RequestMapping("/appeals")
+@RequestMapping("/api/appeals")
 public class AppealsController {
     private static final Logger logger = LoggerFactory.getLogger(OrderController.class);
     @Autowired
