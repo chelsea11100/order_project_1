@@ -32,7 +32,7 @@ public class AppealsService {
         appeal.setStaffId(staffId);
         appeal.setPerformanceRecordId(performanceRecordId);
         appeal.setReason(reason);
-        appeal.setStatus("PENDING");
+        appeal.setStatus("待处理");
         appeal.setCreatedAt(LocalDateTime.now());
 
         Long insertedId = appealsModel.newQuery().insertGetId(appeal);
@@ -76,6 +76,7 @@ public class AppealsService {
     // **获取所有申诉**
     public List<Appeals> getAllAppeals() {
         RecordList<Appeals, Long> records = appealsModel.newQuery().get();
+
         return records.stream().map(Record::getEntity).toList();
     }
 
