@@ -108,6 +108,8 @@ public class PerformanceController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
 
+
+
         // 2. 查询所有绩效记录
         try {
             Long staffId = getUserIdFromToken(request);
@@ -127,6 +129,19 @@ public class PerformanceController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
+    }
+    //管理员获取一个工作人员绩效记录（这个可以了）
+    @GetMapping("/performance/{staffId}")
+    public ResponseEntity<OrderHistoryResponse> getStaffPerformanceRecordsByAdmin(
+            HttpServletRequest request,
+            @PathVariable Long staffId) {
+        if (!hasRole(request, "ADMIN")) {
+            return ResponseEntity.status(403).build(); // 403 Forbidden
+        }
+        List<PerformanceRecords> records = performanceService.getPerformanceRecordsByStaffId(staffId);
+        List<Orders> orders = orderService.getOrderHistory_1(staffId);
+        OrderHistoryResponse response = new OrderHistoryResponse(orders, records);
+        return ResponseEntity.ok(response);
     }
 
     // 修改绩效记录（可以了）

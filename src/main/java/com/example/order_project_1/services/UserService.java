@@ -95,7 +95,7 @@ public class UserService {
 
     public Orders assignOrderToStaff(Long orderId, Long staffId) {
         Record<Orders, Long> orderRecord = orderModel.newQuery().find(orderId);
-        if (orderRecord != null) {
+        if (orderRecord != null&&(orderRecord.getEntity().getStatus().equals("待处理"))) {
             Orders order = orderRecord.getEntity();
             order.setStaffId(staffId);
             order.setStatus("已接单");
@@ -109,7 +109,7 @@ public class UserService {
     public Orders acceptOrder(Long orderId, Long staffId) {
         // 查询订单记录
         Record<Orders, Long> orderRecord = orderModel.newQuery().find(orderId);
-        if (orderRecord != null) {
+        if (orderRecord != null&&(orderRecord.getEntity().getStatus().equals("待处理"))) {
             Orders order = orderRecord.getEntity();
             // 设置接单员工ID并更新状态
             order.setStaffId(staffId);

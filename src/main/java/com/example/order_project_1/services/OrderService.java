@@ -109,25 +109,29 @@ public class OrderService {
     // 取消订单
     public boolean cancelOrder(Long orderId, Long userId, String role) {
         Record<Orders, Long> orderRecord = orderModel.newQuery().find(orderId);
-        if (orderRecord != null) {
-            Orders existingOrder = orderRecord.getEntity();
+        if (orderRecord == null) {
+            return false;
+        }
+
+        try {
             if ("USER".equals(role)) {
+                // 用户取消逻辑保持不变
+                Orders existingOrder = orderRecord.getEntity();
                 if ("待处理".equals(existingOrder.getStatus())) {
                     existingOrder.setStatus("已取消");
                     orderRecord.save();
                     return true;
                 }
             } else if ("ADMIN".equals(role)) {
-                boolean isDuplicateOrder = orderModel.newQuery()
-                        .where("id", orderId)
-                        .where("user_id", "<>", userId)
-                        .first() != null;
-                if (isDuplicateOrder) {
-                    existingOrder.setStatus("已取消");
-                    orderRecord.save();
-                    return true;
-                }
+                // 管理员删除逻辑修复
+                int deletedCount = orderModel.newQuery()
+                        .where("id", orderId)    // 条件1：订单ID
+                        .where("user_id", userId) // 条件2：用户ID
+                        .delete();               // 执行删除
+                return deletedCount > 0;
             }
+        } catch (Exception e) {
+            return false;
         }
         return false;
     }
