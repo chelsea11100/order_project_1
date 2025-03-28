@@ -114,7 +114,7 @@ public class OrderService {
         }
 
         try {
-            if ("USER".equals(role)) {
+            if ("USER".equals(role)&&!orderRecord.getEntity().getStatus().equals("已取消")) {
                 // 用户取消逻辑保持不变
                 Orders existingOrder = orderRecord.getEntity();
                 if ("待处理".equals(existingOrder.getStatus())) {
@@ -122,7 +122,7 @@ public class OrderService {
                     orderRecord.save();
                     return true;
                 }
-            } else if ("ADMIN".equals(role)) {
+            } else if ("ADMIN".equals(role)&&!orderRecord.getEntity().getStatus().equals("已取消")) {
                 // 管理员删除逻辑修复
                 int deletedCount = orderModel.newQuery()
                         .where("id", orderId)    // 条件1：订单ID
