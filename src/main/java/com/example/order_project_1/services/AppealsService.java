@@ -53,11 +53,11 @@ public class AppealsService {
         }
 
         Appeals appeal = appealRecord.getEntity();
-        if (!"PENDING".equals(appeal.getStatus())) {
+        if (!"待处理".equals(appeal.getStatus())) {
             throw new RuntimeException("该申诉已处理");
         }
 
-        String newStatus = approve ? "APPROVED" : "REJECTED";
+        String newStatus = approve ? "已批准" : "已拒绝";
         appeal.setStatus(newStatus);
         appealRecord.save();
 
