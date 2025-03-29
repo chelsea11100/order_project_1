@@ -1,11 +1,15 @@
 package com.example.order_project_1.controllers;
 
+import com.example.order_project_1.DTO.AppealWithOrderDTO;
 import com.example.order_project_1.DTO.OrderHistoryResponse;
+import com.example.order_project_1.models.entity.Appeals;
 import com.example.order_project_1.models.entity.Orders;
 import com.example.order_project_1.models.entity.PerformanceRecords;
 import com.example.order_project_1.models.entity.Users;
+import com.example.order_project_1.services.AppealsService;
 import com.example.order_project_1.services.OrderService;
 import com.example.order_project_1.services.PerformanceService;
+import com.example.order_project_1.services.UserService;
 import gaarason.database.contract.eloquent.Record;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
@@ -20,20 +24,28 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/orders")
 public class OrderController {
     private static final Logger logger = LoggerFactory.getLogger(OrderController.class);//试一下（引入日志）
+    @Autowired
+    private PerformanceService performanceService;
+
+    @Autowired
+    private OrderService orderService;
+
+    @Autowired
+    private AppealsService appealService;
 
     @Value("${jwt.secret-key}")
     private String SECRET_KEY;
 
     private static final String TOKEN_HEADER = "Authorization";
     private static final String TOKEN_PREFIX = "Bearer ";
-
-    @Autowired
-    private OrderService orderService;
     @Autowired
     private PerformanceService performanceRecordService;
 
@@ -266,8 +278,4 @@ public class OrderController {
             return ResponseEntity.status(403).build();
         }
     }
-
-
-
-
 }

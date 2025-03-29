@@ -32,7 +32,7 @@ public class PerformanceRecords extends BaseEntity {
     private Long orderId;
 
     @Column(name = "workload")
-    private String workload;
+    private double workload;
 
     @Column(name = "salary")
     private Double salary;

@@ -1,6 +1,11 @@
 package com.example.order_project_1.controllers;
+import com.example.order_project_1.DTO.AppealWithOrderDTO;
 import com.example.order_project_1.models.entity.Appeals;
+import com.example.order_project_1.models.entity.Orders;
+import com.example.order_project_1.models.entity.PerformanceRecords;
 import com.example.order_project_1.services.AppealsService;
+import com.example.order_project_1.services.OrderService;
+import com.example.order_project_1.services.PerformanceService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import jakarta.servlet.http.HttpServletRequest;
@@ -11,13 +16,22 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
 import org.springframework.beans.factory.annotation.Autowired;
 @RestController
 @RequestMapping("/api/appeals")
 public class AppealsController {
     private static final Logger logger = LoggerFactory.getLogger(OrderController.class);
     @Autowired
-    private AppealsService appealsService;
+    private AppealsService appealService;
+    @Autowired
+    private PerformanceService performanceService;
+
+    @Autowired
+    private OrderService orderService;
 
     @Value("${jwt.secret-key}")
     private String SECRET_KEY;
@@ -92,7 +106,7 @@ public class AppealsController {
 
         try {
             // 调用服务层创建申诉
-            Appeals appeal = appealsService.createAppeal(currentUserId, performanceRecordId, reason);
+            Appeals appeal = appealService.createAppeal(currentUserId, performanceRecordId, reason);
             logger.info("工作人员 {} 成功提交申诉，申诉 ID: {}", currentUserId, appeal.getId());
             return ResponseEntity.ok(appeal);
         } catch (IllegalArgumentException e) {
@@ -118,7 +132,7 @@ public class AppealsController {
 
         try {
             // 调用服务层审批申诉
-            Appeals appeal = appealsService.reviewAppeal(appealId, approve);
+            Appeals appeal = appealService.reviewAppeal(appealId, approve);
             logger.info("管理员成功审批申诉，申诉 ID: {}", appealId);
             return ResponseEntity.ok(appeal);
         } catch (IllegalArgumentException e) {
@@ -131,44 +145,103 @@ public class AppealsController {
     }
 
     // **管理员获取所有申诉**
+    // **管理员获取所有申诉**
     @GetMapping("/all")
-    public ResponseEntity<List<Appeals>> getAllAppeals(HttpServletRequest request) {
-        // 权限验证
+    public ResponseEntity<List<AppealWithOrderDTO>> getAllAppealsWithOrders(HttpServletRequest request) {
+        // 1. 权限校验
         if (!hasRole(request, "ADMIN")) {
-            logger.warn("用户没有权限获取所有申诉，请求被拒绝");
+            logger.warn("权限不足");
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
 
         try {
-            // 调用服务层获取所有申诉
-            List<Appeals> appeals = appealsService.getAllAppeals();
-            logger.info("管理员成功获取所有申诉，数量: {}", appeals.size());
-            return ResponseEntity.ok(appeals);
+            // 2. 获取所有申诉记录
+            List<Appeals> appeals = appealService.getAllAppeals();
+
+            // 3. 批量获取关联数据（性能优化）
+            List<Long> performanceIds = appeals.stream()
+                    .map(Appeals::getPerformanceRecordId)
+                    .collect(Collectors.toList());
+
+            // 获取绩效记录Map (performance_id -> PerformanceRecords)
+            Map<Long, PerformanceRecords> performanceMap = performanceService.getPerformanceRecordsDetails(performanceIds)
+                    .stream()
+                    .collect(Collectors.toMap(PerformanceRecords::getId, Function.identity()));
+
+            // 获取订单ID列表
+            List<Long> orderIds = performanceMap.values().stream()
+                    .map(PerformanceRecords::getOrderId)
+                    .collect(Collectors.toList());
+
+            // 获取订单Map (order_id -> Orders)
+            Map<Long, Orders> ordersMap = orderService.getOrderDetails_1(orderIds)
+                    .stream()
+                    .collect(Collectors.toMap(Orders::getId, Function.identity()));
+
+            // 4. 组装DTO
+            List<AppealWithOrderDTO> result = appeals.stream()
+                    .map(appeal -> {
+                        PerformanceRecords performance = performanceMap.get(appeal.getPerformanceRecordId());
+                        Orders order = performance != null ? ordersMap.get(performance.getOrderId()) : null;
+                        return new AppealWithOrderDTO(appeal, order);
+                    })
+                    .collect(Collectors.toList());
+
+            logger.info("成功获取申诉及关联订单，数量: {}", result.size());
+            return ResponseEntity.ok(result);
         } catch (Exception e) {
-            logger.error("获取所有申诉时发生异常", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            logger.error("获取数据异常", e);
+            return ResponseEntity.internalServerError().build();
         }
     }
-
-    // **管理员根据工作人员 ID 获取申诉**
     @GetMapping("/staff/{staffId}")
-    public ResponseEntity<List<Appeals>> getAppealsByStaffId(
+    public ResponseEntity<List<AppealWithOrderDTO>> getAppealsByStaffId(
             HttpServletRequest request,
             @PathVariable Long staffId) {
 
-        // 权限验证
+        // 1. 权限验证
         if (!hasRole(request, "ADMIN")) {
             logger.warn("用户没有权限获取工作人员的申诉，请求被拒绝");
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
 
         try {
-            // 调用服务层获取工作人员的申诉
-            List<Appeals> appeals = appealsService.getAppealsByStaffId(staffId);
-            logger.info("管理员成功获取工作人员 {} 的申诉，数量: {}", staffId, appeals.size());
-            return ResponseEntity.ok(appeals);
+            // 2. 获取指定工作人员的申诉记录
+            List<Appeals> appeals = appealService.getAppealsByStaffId(staffId);
+
+            // 3. 批量获取关联数据（性能优化）
+            List<Long> performanceIds = appeals.stream()
+                    .map(Appeals::getPerformanceRecordId)
+                    .collect(Collectors.toList());
+
+            // 获取绩效记录Map (performance_id -> PerformanceRecords)
+            Map<Long, PerformanceRecords> performanceMap = performanceService.getPerformanceRecordsDetails(performanceIds)
+                    .stream()
+                    .collect(Collectors.toMap(PerformanceRecords::getId, Function.identity()));
+
+            // 获取订单ID列表
+            List<Long> orderIds = performanceMap.values().stream()
+                    .map(PerformanceRecords::getOrderId)
+                    .collect(Collectors.toList());
+
+            // 获取订单Map (order_id -> Orders)
+            Map<Long, Orders> ordersMap = orderService.getOrderDetails_1(orderIds)
+                    .stream()
+                    .collect(Collectors.toMap(Orders::getId, Function.identity()));
+
+            // 4. 组装DTO
+            List<AppealWithOrderDTO> result = appeals.stream()
+                    .map(appeal -> {
+                        PerformanceRecords performance = performanceMap.get(appeal.getPerformanceRecordId());
+                        Orders order = performance != null ? ordersMap.get(performance.getOrderId()) : null;
+                        return new AppealWithOrderDTO(appeal, order);
+                    })
+                    .collect(Collectors.toList());
+
+            logger.info("管理员成功获取工作人员 {} 的申诉及关联订单，数量: {}", staffId, result.size());
+            return ResponseEntity.ok(result);
         } catch (Exception e) {
-            logger.error("获取工作人员的申诉时发生异常", e);
+            logger.error("获取工作人员的申诉及关联订单时发生异常", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }

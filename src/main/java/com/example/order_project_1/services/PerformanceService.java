@@ -15,7 +15,20 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import javax.net.ssl.*;
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.net.InetAddress;
+import java.net.Socket;
+import java.net.UnknownHostException;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -27,8 +40,8 @@ public class PerformanceService {
     PerformanceRecords.Model performanceRecordModel;
     @Resource
     private Users.Model userModel;
-    private static final String MODEL_NAME = "deepseek-r1:7b";
-    private static final String OLLAMA_API_URL = "https://sc-lapp03.gcu.edu.cn/api/chat";
+    private static final String MODEL_NAME = "gemma2:2b";
+    private static final String OLLAMA_API_URL = "http://localhost:11434/api/chat";
     // 部署好的 API 的 URL
 
 
@@ -47,12 +60,14 @@ public class PerformanceService {
         try {
             System.out.println("已进入方法");
             // 评估工作量
-            JSONObject workloadRequestBody = buildRequestBody("根据以下维护情况用数字（1~5分可以为小数）评估工作量：" + problemDescription);
+            JSONObject workloadRequestBody = buildRequestBody("根据以下维护情况用小数（范围是1~10）评估工作量：" + problemDescription);
             HttpResponse workloadResponse = HttpRequest.post(OLLAMA_API_URL)
                     .header("Content-Type", "application/json; charset=UTF-8")
                     .body(workloadRequestBody.toString())
                     .execute();
+
             System.out.println("workloadResponse.isOk(): "+workloadResponse.isOk());
+            System.out.println("状态码"+workloadResponse.getStatus());
             if (workloadResponse.isOk()) {
                 String workloadResponseStr = workloadResponse.body();
                 JSONObject workloadResponseJson = new JSONObject(workloadResponseStr);
@@ -64,7 +79,7 @@ public class PerformanceService {
 
 
                 if (workloadResultText_1 != null) {
-                    Pattern workloadPattern = Pattern.compile("([1-5](\\.\\d+)?)");
+                    Pattern workloadPattern = Pattern.compile("([1-9]|10)(\\\\.\\\\d+)?");
                     Matcher workloadMatcher = workloadPattern.matcher(workloadResultText_1);
                     if (workloadMatcher.find()) {
                         workload = Double.parseDouble(workloadMatcher.group());
@@ -78,7 +93,7 @@ public class PerformanceService {
             }
 
             // 评估满意度
-            JSONObject degreeRequestBody = buildRequestBody("根据以下用户对维修结果的评价评估满意度返回一个数字（满分 5 分，返回 1 ~5 的数字可以为小数），只要一个数字：" + feedback);
+            JSONObject degreeRequestBody = buildRequestBody("根据以下用户对维修结果的评价评估满意度返回一个小数（满分 10 分，返回 1 ~10 ），只要一个小数：" + feedback);
             HttpResponse degreeResponse = HttpRequest.post(OLLAMA_API_URL)
                     .header("Content-Type", "application/json; charset=UTF-8")
                     .body(degreeRequestBody.toString())
@@ -91,7 +106,7 @@ public class PerformanceService {
                 degreeResultText=removeThinkTags(degreeResultText);
                 System.out.println(degreeResultText);
                 if (degreeResultText != null) {
-                    Pattern degreePattern = Pattern.compile("[1-5]");
+                    Pattern degreePattern = Pattern.compile("([1-9]|10)(\\\\.\\\\d+)?");
                     Matcher degreeMatcher = degreePattern.matcher(degreeResultText);
                     if (degreeMatcher.find()) {
                         degree = Double.parseDouble(degreeMatcher.group());
@@ -105,13 +120,16 @@ public class PerformanceService {
             }
 
             // 计算工资
-            salary = workload + degree ;
+            BigDecimal workloadBD = new BigDecimal(String.valueOf(workload));
+            BigDecimal degreeBD = new BigDecimal(String.valueOf(degree));
+            BigDecimal salaryBD = workloadBD.multiply(new BigDecimal("0.1")).add(degreeBD.multiply(new BigDecimal("0.9")));
+            salary = salaryBD.setScale(1, RoundingMode.HALF_UP).doubleValue();
 
             PerformanceRecords record = new PerformanceRecords();
             record.setStaffId(order.getStaffId());
             record.setCreatedat(LocalDateTime.now());
             record.setOrderId(order.getId());
-            record.setWorkload(workload.toString());
+            record.setWorkload(workload);
             record.setDegree(degree);
             record.setSalary(salary);
 
@@ -130,6 +148,9 @@ public class PerformanceService {
         }
         return null;
     }
+
+
+
     private String removeThinkTags(String input) {
         if (input == null) {
             return null;
@@ -220,7 +241,7 @@ public class PerformanceService {
         Record<PerformanceRecords, Long> record = performanceRecordModel.newQuery().find(performanceId);
         if (record != null) {
             PerformanceRecords entity = record.getEntity();
-            entity.setWorkload(newWorkload.toString());
+            entity.setWorkload(newWorkload);
             record.save();
             return entity;
         }
@@ -275,5 +296,17 @@ public class PerformanceService {
         }
 
         System.out.println("月度绩效更新完成");
+    }
+
+    public List<PerformanceRecords> getPerformanceRecordsDetails(List<Long> performanceIds) {
+        if (performanceIds == null || performanceIds.isEmpty()) {
+            return new ArrayList<>(); // 避免 SQL 语法错误
+        }
+
+        RecordList<PerformanceRecords, Long> records = performanceRecordModel.newQuery()
+                .whereIn("id", performanceIds)
+                .get();
+
+        return records.stream().map(Record::getEntity).toList();
     }
 }

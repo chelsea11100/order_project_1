@@ -23,8 +23,8 @@ public class AppealsService {
     public Appeals createAppeal(Long staffId, Long performanceRecordId, String reason) {
         // 获取绩效记录
         Record<PerformanceRecords, Long> recordOpt = performanceRecordsModel.newQuery().find(performanceRecordId);
-        if (recordOpt == null || recordOpt.getEntity().getDegree() >= 4) {
-            throw new RuntimeException("只有评分低于4的绩效记录才可以申诉");
+        if (recordOpt == null || recordOpt.getEntity().getDegree() >= 8) {
+            throw new RuntimeException("只有评分低于8的绩效记录才可以申诉");
         }
 
         // 插入申诉记录
@@ -62,11 +62,13 @@ public class AppealsService {
         appealRecord.save();
 
         if (approve) {
-            // 更新绩效评分为 4
+            // 更新绩效评分为 8
             Record<PerformanceRecords, Long> performanceRecord = performanceRecordsModel.newQuery().find(appeal.getPerformanceRecordId());
             if (performanceRecord != null) {
                 PerformanceRecords record = performanceRecord.getEntity();
-                record.setDegree(4.0);
+                record.setDegree(8.0);
+                double salary=record.getWorkload()*0.1+record.getDegree()*0.9;
+                record.setSalary(salary);
                 performanceRecord.save();
             }
         }

@@ -105,6 +105,16 @@ public class OrderService {
         Record<Orders, Long> orderRecord = orderModel.newQuery().find(orderId);
         return orderRecord != null ? orderRecord.getEntity() : null;
     }
+       //查看一个订单详情
+    public List<Orders> getOrderDetails_1(List<Long> orderIds) {
+        if (orderIds == null || orderIds.isEmpty()) {
+            return Collections.emptyList(); // 避免执行错误 SQL
+        }
+        RecordList<Orders, Long> records = orderModel.newQuery()
+                .whereIn("id", orderIds)
+                .get();
+        return records.stream().map(Record::getEntity).toList();
+    }
 
     // 取消订单
     public boolean cancelOrder(Long orderId, Long userId, String role) {
